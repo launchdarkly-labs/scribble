@@ -17,19 +17,19 @@ they ship.
 
 ## Interaction polish
 
-- [ ] **Click outside an open ThreadCard closes it.** Today only Esc or
-  re-clicking the sidebar item closes it. Use `pointerdown` on the document
-  (outside the card and outside the sidebar) to clear `activeId`.
-- [ ] **Esc closes the active thread card from anywhere.** Already partially
-  wired in `main.tsx`'s global keydown — verify it works inside the card too
-  (focus may swallow it).
-- [ ] **Hover sidebar item → highlight the corresponding span in the doc.**
-  Add a `hoverId` signal; `highlights.ts` syncs it as a 4th `Highlight`
-  (`scribble-hover`) with a subtle background; clear on mouseleave. No scroll.
-- [ ] **Click the highlight in the doc to open ThreadCard.** Spatial
-  click-target via `document.elementFromPoint` + range hit-testing across all
-  annotation ranges. Closes the loop on "click annotation inline." Hover
-  cursor should also change to indicate clickability.
+- [x] **Click outside an open ThreadCard closes it.** Folded into the
+  global click listener.
+- [x] **Esc closes the active thread card / draft from anywhere.** Global
+  keydown handler clears `draftRange` first, else `activeId`.
+- [x] **Hover sidebar item → highlight the corresponding span in the doc.**
+  `hoverId` signal + `scribble-hover` Highlight, layered additively.
+- [x] **Click the highlight in the doc to open ThreadCard.** Implemented via
+  `annotationAt(x, y)` doing range-rect hit-testing on `click`. Toggles off
+  when clicking the same annotation again.
+- [ ] **Cursor: pointer over annotated spans.** `::highlight()` doesn't
+  support `cursor` per spec. Would need a throttled `mousemove` listener
+  calling `annotationAt` to set `document.body.style.cursor`. Skipped for
+  v0; revisit if click-on-highlight feels undiscoverable.
 
 ## Visual / theme
 
