@@ -26,10 +26,12 @@ they ship.
 - [x] **Click the highlight in the doc to open ThreadCard.** Implemented via
   `annotationAt(x, y)` doing range-rect hit-testing on `click`. Toggles off
   when clicking the same annotation again.
-- [ ] **Cursor: pointer over annotated spans.** `::highlight()` doesn't
-  support `cursor` per spec. Would need a throttled `mousemove` listener
-  calling `annotationAt` to set `document.body.style.cursor`. Skipped for
-  v0; revisit if click-on-highlight feels undiscoverable.
+- [x] **Hover annotated doc text → highlight + pointer cursor.** rAF-throttled
+  mousemove drives `hoverId` + `body.style.cursor`. Same hit-test as click,
+  so hover and click never disagree.
+- [ ] **Cache `locate()` per annotation id** to avoid re-walking the doc's
+  text on every frame of mousemove. Invalidate on annotations signal change.
+  Trivial — only worth it if a heavily-annotated long doc feels janky.
 
 ## Visual / theme
 
