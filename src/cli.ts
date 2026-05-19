@@ -46,25 +46,37 @@ async function main() {
 }
 
 function printHelp() {
-  console.log(`scribble — local-first HTML annotation for human/agent collaboration
+  console.log(`scribble — local annotation layer for HTML documents.
 
 USAGE
   scribble <command> [options]
 
-COMMANDS
-  open <file.html>              Start the daemon and open the doc in a browser
-  list [--unresolved] [--json]  List annotations on the active doc
-  get <id> [--doc <path>]       Show one annotation
-  resolve <id> --reply "..."    Resolve an annotation with an optional reply
-  resolve apply --stdin         Apply a batch of resolves/replies from JSON stdin
-  comment add --quote "..." --summary "..."
-                                Create an agent-authored annotation pinned to a quoted span
+START A SESSION
+  open <file.html>              Start the daemon for this doc and open a browser
+    --detach                    Run the daemon in the background; print {id, url, ...}
+    --no-open                   Don't auto-launch a browser tab
+    --port=N                    Listen on port N (default: 7878, then walks up)
+
+READ / WRITE
+  list [--unresolved] [--json]                 List annotations on the active doc
+  get <id>                                     Show one annotation
+  resolve <id> --reply "..."                   Close an annotation with a reply
+  resolve apply --stdin                        Batch from JSON stdin (see SKILL.md)
+  comment add --quote "..." --summary "..."    Pin an agent question to a span
+    --prefix "..." --suffix "..."              Disambiguate when the quote isn't unique
+
+SESSIONS
   session list [--json]         List active daemon sessions
 
 GLOBAL
   --doc <path>                  Select session by document path
-  --json                        Output JSON
+                                (auto-resolves to a session under cwd when ambiguous)
+  --json                        Machine-readable output where supported
   -h, --help                    Show help
+  -v, --version                 Show version
+
+AGENTS
+  Skill file at src/skill/SKILL.md (in this repo) teaches the workflow.
 `);
 }
 

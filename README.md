@@ -1,80 +1,91 @@
 # scribble
 
-Local-first annotation layer for HTML documents, so humans and agents can
-collaborate on rich artifacts the way [Hunk](https://github.com/) lets them
-collaborate on diffs.
+> Local annotation layer for HTML documents, so humans and agents can
+> collaborate on rich artifacts the way [Hunk](https://github.com/) lets
+> them collaborate on diffs.
+
+You point scribble at any HTML file. It serves the file in your browser
+with a thin annotation sidebar overlaid on top. You highlight text and
+leave comments. Your agent reads them via CLI and replies. The agent can
+also pin its own questions to specific spans, and you reply back. The
+document on disk is never touched; comments live in a sidecar JSONL file
+beside it.
 
 ## Install
 
 Requires [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install | bash`).
 
 ```bash
-git clone <this-repo> ~/projects/scribble
-cd ~/projects/scribble
+git clone <this-repo>
+cd scribble
 bun install
-bun link              # registers `scribble` on your PATH (via ~/.bun/bin)
+bun link
 ```
 
-That's it. `~/.bun/bin/scribble` is now a symlink chain back to
-`src/cli.ts` in this repo. `git pull` updates everything — no rebuild step.
+That installs `scribble` on your PATH as a symlink chain back to this
+repo. `git pull` updates everything; no rebuild step. `bun unlink` from
+this directory removes it.
 
-To uninstall: `bun unlink` from this directory.
-
-## Quickstart
+## Use it
 
 ```bash
-scribble open ./some.html          # starts the daemon, opens a browser tab
+scribble open ./some.html
 ```
 
-Select text in the document, click the `Comment` pill (or hit `⌘K`), type, `⌘↩`. Comments are written to `.scribble/<doc>.jsonl` next to the file.
+Opens a browser tab. Select text and press **⌘K** (or click the pill that
+appears) to leave a comment. Use **⌘↩** to submit, **Esc** to cancel.
+Click any annotation in the sidebar or any highlighted span in the doc to
+open its thread.
 
-## CLI
+Annotations are written to `./.scribble/some.html.jsonl` next to the
+document — git-friendly, agent-readable, no database.
+
+## With an agent
+
+Point your agent at `src/skill/SKILL.md`. That file teaches it the three
+collaboration flows, the commands, and the etiquette (e.g. resolve with
+substantive replies, don't edit sections with open annotations pointing
+into them).
+
+A typical loop:
 
 ```bash
-scribble open <file.html> [--detach] [--no-open]
-                                     # start a daemon for that doc
-scribble session list [--json]       # which daemons are running
+# You annotate in the browser, then:
+scribble list --unresolved --json | <agent>
+
+# Agent replies:
+scribble resolve <id> --reply "..."
+
+# Or asks you a targeted question:
+scribble comment add --quote "Q3 revenue grew 12%" \
+  --summary "Is this the correct figure?"
+```
+
+The full CLI:
+
+```
+scribble open <file.html> [--detach] [--no-open] [--port=N]
 scribble list [--unresolved] [--json] [--doc <path>]
 scribble get <id> [--doc <path>]
 scribble resolve <id> --reply "..." [--doc <path>]
-scribble resolve apply --stdin       # batch resolve/reply from JSON stdin
-scribble comment add --quote "..." --summary "..."
-                                     # agent-initiated annotation (Flow C)
+scribble resolve apply --stdin [--doc <path>]
+scribble comment add --quote "..." --summary "..." [--prefix "..."] [--suffix "..."]
+scribble session list [--json]
 ```
 
-Session selection auto-resolves in this order: `--doc` match, single session, or single session whose docPath is under your current working directory.
+When multiple sessions are live, commands auto-resolve to the one whose
+document path is under your current working directory (Hunk's
+`--repo .` pattern). Otherwise pass `--doc <path>`.
 
-## Agent integration
+## Hacking on it
 
-There's a skill at `src/skill/SKILL.md` that teaches agents the workflow. Point your agent at it via its absolute path; the skill itself explains the commands, the three collaboration flows, and the hard rules (resolve with substantive replies, don't edit sections with open annotations pointing into them, etc.).
+See [AGENTS.md](./AGENTS.md) — architecture, layout, conventions, common
+tasks, sharp edges. The same file is symlinked as `CLAUDE.md` for Claude
+Code.
 
-## Architecture
+## Status
 
-- **Daemon**: `Bun.serve()` HTTP + WebSocket; serves the user's HTML with our overlay injected near `</body>`. Watches the source file and broadcasts `doc-changed` on edits.
-- **Overlay**: React 19 + `@preact/signals-react`, mounted into a closed shadow root. The host doc and the scribble chrome never see each other's CSS.
-- **Anchoring**: W3C `TextQuoteSelector` (with prefix/suffix disambiguation) + `TextPositionSelector` fallback, rendered via the CSS Custom Highlight API — no DOM mutation of the host doc.
-- **Storage**: append-only JSONL per doc at `.scribble/<doc>.jsonl`, kernel-atomic via `O_APPEND`.
-- **Distribution**: `bun link` for the linked source install (current). Compiled single-binary distribution via `bun build --compile` is wired in `build.ts` but not yet the default path — it needs the overlay-asset embedding work before it's user-ready.
-
-## Layout
-
-```
-src/
-  cli.ts                 subcommand router
-  commands/              open, list, get, resolve, comment, session
-  daemon/
-    server.ts            Bun.serve + WS + file watcher
-    store.ts             JSONL read/append (O_APPEND atomic)
-    anchoring.ts         server-side quote-to-selectors (Flow C)
-  overlay/
-    main.tsx             React mount + global keyboard/click/hover
-    anchoring.ts         describe/locate W3C selectors in the live DOM
-    highlights.ts        CSS.highlights sync (open / resolved / active / hover)
-    store.ts             signals + WebSocket sync + orphan tracking
-    components/          Sidebar, SelectionPill, DraftCard, ThreadCard
-    overlay.css          shadow-root-scoped styles
-  shared/types.ts        zod schemas shared by daemon + overlay
-  skill/SKILL.md         agent instructions
-notes/                   design notes + ideas
-scratch/                 ad-hoc test harnesses (parallel-repro.ts etc.)
-```
+Pre-1.0; daily-driver-ish. The interaction loop, persistence, anchoring,
+and re-anchoring on file changes are solid. Distribution beyond `bun link`
+is filed but not done. See `notes/ideas.md` for the living TODO and the
+list of things explicitly tried and rejected.
