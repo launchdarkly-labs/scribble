@@ -1,0 +1,30 @@
+{
+  "name": "scribble",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Local-first annotation layer for HTML documents — collaborate with agents on rich artifacts.",
+  "bin": {
+    "scribble": "./dist/scribble"
+  },
+  "scripts": {
+    "dev": "bun --hot src/cli.ts --",
+    "build": "bun run build.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@base-ui-components/react": "^1.0.0-beta.0",
+    "@preact/signals-react": "^3.0.0",
+    "cmdk": "^1.1.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hotkeys-hook": "^4.6.0",
+    "ulid": "^2.3.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}
