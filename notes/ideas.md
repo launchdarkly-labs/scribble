@@ -5,6 +5,10 @@ they ship.
 
 ## Bugs / correctness
 
+- [ ] **Overlay bundle is cached at daemon startup.** Every overlay code change
+  requires `kill <pid>` + restart. Either (a) rebuild on file change via a
+  watcher, or (b) rebuild on every `GET /` in dev. Probably (b) for simplicity
+  — dev-only, prod path serves a pre-built static bundle.
 - [ ] **Read-after-write latency.** `scribble list` immediately after
   `scribble resolve` shows the old status for one tick. Data on disk is correct.
   Hypothesis: `Bun.file` stat caching, or kernel page-cache propagation timing.
