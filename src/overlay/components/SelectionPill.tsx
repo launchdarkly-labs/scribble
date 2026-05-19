@@ -59,7 +59,8 @@ export function SelectionPill() {
         setRect(null);
       }}
     >
-      Comment
+      <span>Comment</span>
+      <span className="kbd">⌘K</span>
     </button>
   );
 }

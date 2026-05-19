@@ -33,7 +33,27 @@ export async function readAll(docPath: string): Promise<Annotation[]> {
       console.warn(`[store] skipping malformed line: ${(err as Error).message}`);
     }
   }
-  return [...latest.values()].sort((a, b) => a.created.localeCompare(b.created));
+  return [...latest.values()]
+    .filter((a) => a.status !== "deleted")
+    .sort((a, b) => a.created.localeCompare(b.created));
+}
+
+/** Read every record including deleted (used internally for tombstone resolution). */
+export async function readAllIncludingDeleted(docPath: string): Promise<Annotation[]> {
+  const path = storePathFor(docPath);
+  const file = Bun.file(path);
+  if (!(await file.exists())) return [];
+  const text = await file.text();
+  const latest = new Map<string, Annotation>();
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const parsed = Annotation.parse(JSON.parse(trimmed));
+      latest.set(parsed.id, parsed);
+    } catch {}
+  }
+  return [...latest.values()];
 }
 
 export async function append(docPath: string, ann: Annotation): Promise<void> {

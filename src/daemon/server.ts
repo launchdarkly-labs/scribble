@@ -31,6 +31,10 @@ const PatchBody = z.object({
     .optional(),
 });
 
+const RemoveReply = z.object({
+  replyIndex: z.number().int().nonnegative(),
+});
+
 interface DaemonOptions {
   docPath: string;
   port: number;
@@ -171,6 +175,17 @@ async function handleApi(
     await store.append(docPath, ann);
     broadcast({ type: "upsert", annotation: ann });
     return Response.json(ann, { status: 201 });
+  }
+
+  if (req.method === "DELETE" && id) {
+    const updated = await store.update(docPath, id, (prev) => ({
+      ...prev,
+      status: "deleted",
+      updated: new Date().toISOString(),
+    }));
+    if (!updated) return new Response("Not found", { status: 404 });
+    broadcast({ type: "remove", id });
+    return new Response(null, { status: 204 });
   }
 
   if (req.method === "PATCH" && id) {

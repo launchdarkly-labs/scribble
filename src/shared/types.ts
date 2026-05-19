@@ -44,7 +44,7 @@ export const Annotation = z.object({
     value: z.string(),
   }),
   author: z.enum(["human", "agent"]),
-  status: z.enum(["open", "resolved"]),
+  status: z.enum(["open", "resolved", "deleted"]),
   replies: z.array(Reply).default([]),
   created: z.string(),
   updated: z.string(),

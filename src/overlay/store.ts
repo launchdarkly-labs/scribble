@@ -84,3 +84,17 @@ export async function replyToAnnotation(id: string, body: string): Promise<void>
   });
   if (!res.ok) throw new Error(`Reply failed: ${res.status}`);
 }
+
+export async function reopenAnnotation(id: string): Promise<void> {
+  const res = await fetch(`/_scribble/api/annotations/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "open" }),
+  });
+  if (!res.ok) throw new Error(`Reopen failed: ${res.status}`);
+}
+
+export async function deleteAnnotation(id: string): Promise<void> {
+  const res = await fetch(`/_scribble/api/annotations/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+}

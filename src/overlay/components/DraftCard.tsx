@@ -49,7 +49,7 @@ export function DraftCard() {
 
   return (
     <div className="card" style={style} role="dialog" aria-label="New comment">
-      <div className="card-quote">“{exact}”</div>
+      <div className="card-quote">{exact}</div>
       <div className="card-body">
         <textarea
           ref={textareaRef}
@@ -68,8 +68,10 @@ export function DraftCard() {
         />
       </div>
       <div className="card-actions">
-        <span className="card-hint">⌘↩ to comment · esc to cancel</span>
-        <div>
+        <span className="card-hint">
+          <kbd>⌘↩</kbd> comment · <kbd>esc</kbd> cancel
+        </span>
+        <div className="card-buttons">
           <button type="button" className="btn ghost" onClick={() => (draftRange.value = null)}>
             Cancel
           </button>

@@ -1,32 +1,51 @@
-/* Styles inside the shadow root. They cannot leak out, and the host doc's
-   styles cannot leak in. Keep variables here so themes are local. */
+/* Shadow-root-scoped overlay styles.
+   The host document's CSS cannot reach us; ours cannot reach the host
+   (except via the host-side <style> injected from main.tsx for ::highlight). */
 
 :host {
-  --accent: #c2410c;
-  --accent-soft: color-mix(in oklch, var(--accent) 12%, transparent);
-  --ink: #1a1a1a;
-  --muted: #6b6b6b;
+  /* Pink/magenta accent — calmer than the orange we had */
+  --accent: oklch(60% 0.33 340);
+  --accent-mid: oklch(72% 0.18 340);
+  --accent-soft: oklch(96% 0.012 340);
+  --accent-line: oklch(60% 0.33 340 / 0.5);
+
+  --ink: oklch(22% 0.005 280);
+  --muted: oklch(50% 0.01 280);
+  --faint: oklch(70% 0.008 280);
   --bg: #ffffff;
-  --rule: #e5e0d6;
-  --surface: #faf8f4;
-  --shadow: 0 8px 24px -8px rgb(0 0 0 / 0.15), 0 2px 6px -2px rgb(0 0 0 / 0.08);
-  --radius: 8px;
+  --surface: oklch(98.5% 0.003 280);
+  --rule: oklch(92% 0.005 280);
+
+  --shadow: 0 10px 28px -12px rgb(0 0 0 / 0.18), 0 2px 6px -2px rgb(0 0 0 / 0.06);
+  --radius: 10px;
+
   --font-ui: ui-sans-serif, -apple-system, "Inter", system-ui, sans-serif;
+  --font-serif: ui-serif, "Iowan Old Style", "Charter", Georgia, serif;
+
   color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :host {
-    --ink: #e8e4dc;
-    --muted: #9a958a;
-    --bg: #14130f;
-    --rule: #2a2823;
-    --surface: #1a1814;
-    --shadow: 0 8px 24px -8px rgb(0 0 0 / 0.5);
+    --accent: oklch(72% 0.18 340);
+    --accent-mid: oklch(78% 0.16 340);
+    --accent-soft: oklch(26% 0.04 340);
+    --accent-line: oklch(72% 0.18 340 / 0.5);
+
+    --ink: oklch(92% 0.005 280);
+    --muted: oklch(65% 0.01 280);
+    --faint: oklch(45% 0.008 280);
+    --bg: oklch(16% 0.005 280);
+    --surface: oklch(20% 0.005 280);
+    --rule: oklch(28% 0.005 280);
+
+    --shadow: 0 12px 32px -12px rgb(0 0 0 / 0.6), 0 2px 8px -2px rgb(0 0 0 / 0.3);
   }
 }
 
 * { box-sizing: border-box; }
+
+/* ────────────────────────  Sidebar  ─────────────────────── */
 
 .sidebar {
   position: fixed;
@@ -45,47 +64,66 @@
 }
 
 .sidebar-header {
-  padding: 12px 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--rule);
   display: flex;
   align-items: baseline;
   justify-content: space-between;
 }
 
-.sidebar-title {
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
+.sidebar-title { font-weight: 600; letter-spacing: -0.01em; font-size: 13px; }
 
-.sidebar-status {
-  font-size: 11px;
-  color: var(--muted);
-}
-
+.sidebar-status { font-size: 11px; color: var(--muted); }
 .sidebar-status .dot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
+  width: 6px; height: 6px;
   border-radius: 50%;
-  background: var(--muted);
-  margin-right: 4px;
+  background: var(--faint);
+  margin-right: 5px;
   vertical-align: middle;
 }
-
-.sidebar-status .dot.live { background: #10b981; }
+.sidebar-status .dot.live { background: oklch(70% 0.15 145); }
 
 .sidebar-list {
   flex: 1;
   overflow-y: auto;
   padding: 8px;
+  scrollbar-width: thin;
 }
 
 .sidebar-empty {
-  padding: 24px 16px;
+  padding: 32px 20px;
   color: var(--muted);
   font-style: italic;
   line-height: 1.5;
+  font-size: 12px;
 }
+
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  user-select: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+.section-label:hover { color: var(--ink); }
+.section-label .caret {
+  display: inline-block;
+  width: 8px;
+  transition: transform 0.15s;
+}
+.section-label.collapsed .caret { transform: rotate(-90deg); }
+.section-label .count { color: var(--faint); font-weight: 500; }
 
 .item {
   display: block;
@@ -99,12 +137,17 @@
   cursor: pointer;
   font: inherit;
   color: inherit;
-  transition: border-color 0.15s, transform 0.05s;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
 }
-.item:hover { border-color: color-mix(in oklch, var(--accent) 40%, var(--rule)); }
-.item:active { transform: translateY(1px); }
-.item.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-.item.resolved { opacity: 0.55; }
+.item:hover { border-color: var(--accent-line); }
+.item.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.item.resolved { opacity: 0.6; }
+.item.resolved:hover { opacity: 0.85; }
 
 .item-head {
   display: flex;
@@ -112,19 +155,21 @@
   align-items: center;
   font-size: 11px;
   color: var(--muted);
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
+.item-head .author { display: inline-flex; align-items: center; gap: 4px; }
 
 .item-quote {
+  font-family: var(--font-serif);
   font-size: 12px;
   color: var(--muted);
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--accent-line);
   padding-left: 8px;
   margin: 4px 0 6px;
   font-style: italic;
   line-height: 1.4;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -134,20 +179,21 @@
   line-height: 1.45;
   color: var(--ink);
   white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.item-reply {
+.item-reply-count {
+  display: inline-block;
   margin-top: 6px;
-  padding: 6px 8px;
-  background: var(--surface);
-  border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
-  border-left: 2px solid var(--rule);
 }
-.item-reply b { color: var(--ink); font-weight: 600; }
 
-/* Floating selection pill */
+/* ─────────────────────  Selection pill  ─────────────────── */
+
 .pill {
   position: fixed;
   background: var(--ink);
@@ -159,19 +205,23 @@
   cursor: pointer;
   box-shadow: var(--shadow);
   z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
-.pill::after {
-  content: "  ⌘K";
-  opacity: 0.5;
+.pill .kbd {
   font-weight: 400;
-  margin-left: 2px;
+  font-size: 11px;
+  opacity: 0.55;
+  letter-spacing: 0.05em;
 }
 .pill:hover { transform: translateY(-1px); }
 
-/* Floating comment card */
+/* ─────────────────  Card (draft + thread)  ──────────────── */
+
 .card {
   position: fixed;
-  width: 320px;
+  width: 360px;
   background: var(--bg);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
@@ -183,60 +233,161 @@
 }
 
 .card-quote {
-  padding: 10px 12px 8px;
-  font-size: 12px;
+  padding: 10px 14px 6px;
+  font-family: var(--font-serif);
+  font-size: 12.5px;
   color: var(--muted);
-  border-left: 3px solid var(--accent);
-  background: var(--accent-soft);
+  border-left: 2px solid var(--accent);
   font-style: italic;
-  max-height: 4lh;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  white-space: pre-wrap;
+  margin: 8px 0 0 8px;
 }
 
-.card-body { padding: 8px 12px 12px; }
+.card-body { padding: 8px 14px 4px; }
 
 .card-body textarea {
   width: 100%;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
+  border: none;
+  border-radius: 6px;
   padding: 8px 10px;
   font: inherit;
   color: inherit;
   background: var(--surface);
   resize: none;
   outline: none;
-  min-height: 60px;
+  min-height: 64px;
   field-sizing: content;
+  max-height: 200px;
 }
-.card-body textarea:focus { border-color: var(--accent); }
+.card-body textarea:focus { background: var(--accent-soft); }
+.card-body textarea::placeholder { color: var(--faint); }
 
 .card-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  border-top: 1px solid var(--rule);
-  background: var(--surface);
+  gap: 8px;
+  padding: 8px 14px 10px;
 }
 
-.card-hint { font-size: 11px; color: var(--muted); }
+.card-hint {
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+.card-hint kbd {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  padding: 1px 4px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.card-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
 
 .btn {
   background: var(--ink);
   color: var(--bg);
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   padding: 5px 10px;
   font: 600 12px/1.2 var(--font-ui);
   cursor: pointer;
+  white-space: nowrap;
 }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:hover:not(:disabled) { background: oklch(from var(--ink) calc(l + 0.06) c h); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .btn.ghost {
   background: transparent;
   color: var(--muted);
+  padding: 5px 8px;
 }
-.btn.ghost:hover { color: var(--ink); }
+.btn.ghost:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--surface);
+}
 
-/* Highlight API styling — lives in light DOM, not shadow, but kept here for reference.
-   These rules are also injected into the host document on mount. */
+.btn.danger { background: transparent; color: var(--muted); }
+.btn.danger:hover:not(:disabled) {
+  color: oklch(60% 0.18 25);
+  background: oklch(96% 0.02 25);
+}
+@media (prefers-color-scheme: dark) {
+  .btn.danger:hover:not(:disabled) {
+    background: oklch(28% 0.04 25);
+  }
+}
+
+/* ──────────────────────  Thread card  ────────────────────── */
+
+.thread {
+  padding: 4px 14px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.thread-message {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.thread-message-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.thread-message-head .author {
+  font-weight: 600;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.thread-message-head time { color: var(--faint); font-size: 10.5px; }
+
+.thread-message-body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.thread-divider {
+  height: 1px;
+  background: var(--rule);
+  margin: 4px 14px 0;
+}
+
+.status-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+}
+.status-pill.open { background: var(--accent-soft); color: var(--accent); }
