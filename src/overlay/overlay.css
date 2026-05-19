@@ -87,6 +87,7 @@
 .sidebar-list {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 8px;
   scrollbar-width: thin;
 }
@@ -262,6 +263,8 @@
   min-height: 64px;
   field-sizing: content;
   max-height: 200px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .card-body textarea:focus { background: var(--accent-soft); }
 .card-body textarea::placeholder { color: var(--faint); }
@@ -338,6 +341,7 @@
   gap: 10px;
   max-height: 280px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
 }
 
