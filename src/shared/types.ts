@@ -30,8 +30,27 @@ export const Target = z.object({
   selector: z.array(Selector).min(1),
 });
 
+/**
+ * An annotation/reply author. Either a `human` or `agent`, optionally
+ * named. `by` is who's behind an agent (the user running the CLI/harness),
+ * useful in team contexts.
+ *
+ * Legacy records have `author: "human" | "agent"` as a bare string; we
+ * accept that form and normalize to the object form below.
+ */
+const AuthorObject = z.object({
+  kind: z.enum(["human", "agent"]),
+  name: z.string().optional(),
+  email: z.string().optional(),
+  by: z.string().optional(),
+});
+export const Author = z.preprocess(
+  (v) => (typeof v === "string" ? { kind: v } : v),
+  AuthorObject,
+);
+
 export const Reply = z.object({
-  author: z.enum(["human", "agent"]),
+  author: Author,
   body: z.string(),
   created: z.string(), // ISO timestamp
 });
@@ -43,7 +62,7 @@ export const Annotation = z.object({
     type: z.literal("TextualBody"),
     value: z.string(),
   }),
-  author: z.enum(["human", "agent"]),
+  author: Author,
   status: z.enum(["open", "resolved", "deleted"]),
   replies: z.array(Reply).default([]),
   created: z.string(),
@@ -54,8 +73,14 @@ export type TextQuoteSelector = z.infer<typeof TextQuoteSelector>;
 export type TextPositionSelector = z.infer<typeof TextPositionSelector>;
 export type Selector = z.infer<typeof Selector>;
 export type Target = z.infer<typeof Target>;
+export type Author = z.infer<typeof Author>;
 export type Reply = z.infer<typeof Reply>;
 export type Annotation = z.infer<typeof Annotation>;
+
+/** Prefer the author's name; fall back to "you" or "agent" by kind. */
+export function authorLabel(a: Author): string {
+  return a.name && a.name.length > 0 ? a.name : a.kind === "agent" ? "agent" : "you";
+}
 
 /** WebSocket messages from daemon → browser. */
 export type WsMessage =

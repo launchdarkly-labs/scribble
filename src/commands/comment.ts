@@ -1,4 +1,5 @@
 import { resolveSession } from "./_session-registry";
+import { resolveAgentAuthor, resolveHumanAuthorFromCli } from "./_identity";
 
 export async function comment(args: string[]) {
   const [sub, ...rest] = args;
@@ -13,12 +14,16 @@ async function commentAdd(args: string[]) {
   const summary = flagValue(args, "--summary");
   const prefix = flagValue(args, "--prefix");
   const suffix = flagValue(args, "--suffix");
-  const author = (flagValue(args, "--author") ?? "agent") as "human" | "agent";
+  const asFlag = flagValue(args, "--as") ?? flagValue(args, "--author");
   const docFlag = flagValue(args, "--doc");
   if (!quote) throw new Error("--quote required");
   if (!summary) throw new Error("--summary required");
 
   const sess = await resolveSession(docFlag);
+  const author =
+    asFlag === "human"
+      ? resolveHumanAuthorFromCli(sess.docPath)
+      : resolveAgentAuthor(sess.docPath);
   const res = await fetch(`http://localhost:${sess.port}/_scribble/api/annotations/by-quote`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -1,4 +1,5 @@
 import { resolveSession } from "./_session-registry";
+import { resolveAgentAuthor } from "./_identity";
 
 export async function resolve(args: string[]) {
   // `scribble resolve apply --stdin` — batch
@@ -13,7 +14,7 @@ export async function resolve(args: string[]) {
   const sess = await resolveSession(docFlag);
 
   const body: Record<string, unknown> = { status: "resolved" };
-  if (reply) body.reply = { author: "agent", body: reply };
+  if (reply) body.reply = { author: resolveAgentAuthor(sess.docPath), body: reply };
 
   const res = await fetch(`http://localhost:${sess.port}/_scribble/api/annotations/${id}`, {
     method: "PATCH",
@@ -60,14 +61,17 @@ async function resolveApply(args: string[]) {
     : ((parsed as { items?: Item[] }).items ?? []);
   if (rawItems.length === 0) throw new Error("No items in batch");
 
+  const sess = await resolveSession(docFlag);
+  const agentAuthor = resolveAgentAuthor(sess.docPath);
+
   // Default: items with a reply and no status become 'resolved'.
   const items = rawItems.map((it) => {
     const status = it.status ?? (it.reply ? ("resolved" as const) : undefined);
-    const reply = it.reply ? { body: it.reply, author: it.author ?? "agent" } : undefined;
+    const reply = it.reply
+      ? { body: it.reply, author: it.author ? { kind: "agent" as const, name: it.author } : agentAuthor }
+      : undefined;
     return { id: it.id, status, reply };
   });
-
-  const sess = await resolveSession(docFlag);
   const res = await fetch(`http://localhost:${sess.port}/_scribble/api/annotations/batch`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

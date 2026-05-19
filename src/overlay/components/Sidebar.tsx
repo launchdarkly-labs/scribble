@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSignals } from "@preact/signals-react/runtime";
 import { annotations, activeId, hoverId, connected, unresolved, orphanedIds } from "../store";
 import type { Annotation } from "@/shared/types";
+import { authorLabel } from "@/shared/types";
 
 export function Sidebar() {
   useSignals();
@@ -106,7 +107,7 @@ function Item({ ann, orphaned }: { ann: Annotation; orphaned?: boolean }) {
     >
       <div className="item-head">
         <span className="author">
-          {ann.author === "agent" ? "🤖 agent" : "👤 you"}
+          {ann.author.kind === "agent" ? "🤖" : "👤"} {authorLabel(ann.author)}
         </span>
         <span className={`status-pill ${orphaned ? "orphaned" : ann.status}`}>
           {orphaned ? "not found" : ann.status}

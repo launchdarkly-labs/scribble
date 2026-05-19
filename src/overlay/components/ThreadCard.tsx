@@ -9,7 +9,8 @@ import {
   deleteAnnotation,
 } from "../store";
 import { locate } from "../anchoring";
-import type { Annotation } from "@/shared/types";
+import type { Annotation, Author } from "@/shared/types";
+import { authorLabel } from "@/shared/types";
 
 const CARD_W = 360;
 const SIDEBAR_W = 320;
@@ -196,14 +197,16 @@ function ThreadMessage({
   body,
   created,
 }: {
-  author: Annotation["author"];
+  author: Author;
   body: string;
   created: string;
 }) {
   return (
     <div className="thread-message">
       <div className="thread-message-head">
-        <span className="author">{author === "agent" ? "🤖 agent" : "👤 you"}</span>
+        <span className="author">
+          {author.kind === "agent" ? "🤖" : "👤"} {authorLabel(author)}
+        </span>
         <time dateTime={created}>{relativeTime(created)}</time>
       </div>
       <div className="thread-message-body">{body}</div>

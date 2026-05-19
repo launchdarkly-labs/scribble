@@ -8,10 +8,11 @@
 import { resolve, isAbsolute, dirname, basename } from "node:path";
 import { watch as fsWatch } from "node:fs";
 import { ulid } from "ulid";
-import { Annotation, type WsMessage } from "@/shared/types";
+import { Annotation, Author, type WsMessage } from "@/shared/types";
 import { z } from "zod";
 import * as store from "./store";
 import { findInDoc } from "./anchoring";
+import { resolveHumanAuthor } from "./identity";
 
 const CreateBody = Annotation.omit({
   id: true,
@@ -27,7 +28,7 @@ const PatchBody = z.object({
   status: z.enum(["open", "resolved"]).optional(),
   reply: z
     .object({
-      author: z.enum(["human", "agent"]),
+      author: Author,
       body: z.string(),
     })
     .optional(),
@@ -42,7 +43,7 @@ const ByQuoteBody = z.object({
   prefix: z.string().optional(),
   suffix: z.string().optional(),
   summary: z.string().min(1),
-  author: z.enum(["human", "agent"]).default("agent"),
+  author: Author.default({ kind: "agent" }),
 });
 
 const BatchItem = z
@@ -52,7 +53,7 @@ const BatchItem = z
     reply: z
       .object({
         body: z.string().min(1),
-        author: z.enum(["human", "agent"]).default("agent"),
+        author: Author.default({ kind: "agent" }),
       })
       .optional(),
   })
@@ -75,6 +76,10 @@ export async function startDaemon(opts: DaemonOptions) {
   if (!(await docFile.exists())) {
     throw new Error(`Document not found: ${docPath}`);
   }
+
+  // Resolve the local human's identity from git config (or env override)
+  // once at startup; the overlay reads it from an injected <meta> tag.
+  const humanAuthor = resolveHumanAuthor(docPath);
 
   // The overlay is rebuilt on every doc reload in dev so source edits show
   // up without restarting the daemon. The build typically takes <100ms and
@@ -196,7 +201,7 @@ export async function startDaemon(opts: DaemonOptions) {
           );
         }
         const original = await Bun.file(docPath).text();
-        const injected = injectOverlay(original, overlay.entry);
+        const injected = injectOverlay(original, overlay.entry, humanAuthor);
         return new Response(injected, {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
@@ -354,14 +359,27 @@ async function handleApi(
   return new Response("Method not allowed", { status: 405 });
 }
 
-function injectOverlay(html: string, entryName: string): string {
+function injectOverlay(html: string, entryName: string, humanAuthor: Author): string {
+  const safeAuthor = JSON.stringify(humanAuthor)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+  const head = `<meta name="scribble-user" content="${safeAuthor}">`;
   const snippet = `
 <!-- scribble overlay -->
 <div id="scribble-root"></div>
 <script type="module" src="/_scribble/assets/${entryName}"></script>
 `;
-  if (html.includes("</body>")) {
-    return html.replace("</body>", `${snippet}\n</body>`);
+  let out = html;
+  if (out.includes("</head>")) {
+    out = out.replace("</head>", `${head}\n</head>`);
+  } else {
+    out = head + out;
   }
-  return html + snippet;
+  if (out.includes("</body>")) {
+    out = out.replace("</body>", `${snippet}\n</body>`);
+  } else {
+    out = out + snippet;
+  }
+  return out;
 }

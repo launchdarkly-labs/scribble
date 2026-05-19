@@ -7,7 +7,28 @@
  * to matter and we avoid reconciliation bugs.
  */
 import { signal, computed } from "@preact/signals-react";
-import type { Annotation, Selector, WsMessage } from "@/shared/types";
+import type { Annotation, Author, Selector, WsMessage } from "@/shared/types";
+
+/**
+ * The local human's identity, sourced from the <meta name="scribble-user">
+ * tag the daemon injects (which it resolved from git config / env). Falls
+ * back to a generic { kind: "human" } if the tag isn't there for some reason.
+ */
+export const humanAuthor: Author = readHumanAuthor();
+
+function readHumanAuthor(): Author {
+  if (typeof document === "undefined") return { kind: "human" };
+  const meta = document.querySelector('meta[name="scribble-user"]');
+  const raw = meta?.getAttribute("content");
+  if (!raw) return { kind: "human" };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && parsed.kind === "human") {
+      return parsed as Author;
+    }
+  } catch {}
+  return { kind: "human" };
+}
 
 export const annotations = signal<Annotation[]>([]);
 export const activeId = signal<string | null>(null);
@@ -65,7 +86,7 @@ export function connect() {
       // Auto-open fresh agent-authored questions so the user sees them.
       if (
         isNew &&
-        msg.annotation.author === "agent" &&
+        msg.annotation.author.kind === "agent" &&
         msg.annotation.status === "open"
       ) {
         activeId.value = msg.annotation.id;
@@ -86,7 +107,7 @@ export async function createAnnotation(input: {
     body: JSON.stringify({
       target: { source: location.pathname, selector: input.selectors },
       body: { type: "TextualBody", value: input.body },
-      author: "human",
+      author: humanAuthor,
     }),
   });
   if (!res.ok) throw new Error(`Create failed: ${res.status}`);
@@ -95,7 +116,7 @@ export async function createAnnotation(input: {
 
 export async function resolveAnnotation(id: string, reply?: string): Promise<void> {
   const body: Record<string, unknown> = { status: "resolved" };
-  if (reply) body.reply = { author: "human", body: reply };
+  if (reply) body.reply = { author: humanAuthor, body: reply };
   const res = await fetch(`/_scribble/api/annotations/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -108,7 +129,7 @@ export async function replyToAnnotation(id: string, body: string): Promise<void>
   const res = await fetch(`/_scribble/api/annotations/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ reply: { author: "human", body } }),
+    body: JSON.stringify({ reply: { author: humanAuthor, body } }),
   });
   if (!res.ok) throw new Error(`Reply failed: ${res.status}`);
 }
