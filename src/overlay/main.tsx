@@ -13,8 +13,8 @@ import { Sidebar } from "./components/Sidebar";
 import { SelectionPill } from "./components/SelectionPill";
 import { DraftCard } from "./components/DraftCard";
 import { ThreadCard } from "./components/ThreadCard";
-import { connect, draftRange, activeId } from "./store";
-import { startHighlightSync } from "./highlights";
+import { connect, draftRange, activeId, annotations } from "./store";
+import { startHighlightSync, annotationAt } from "./highlights";
 // Bun bundles overlay.css as a text string via the css→text loader.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error - text import
@@ -57,6 +57,9 @@ const HOST_STYLES = `
   text-decoration-color: var(--scribble-accent);
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
+}
+::highlight(scribble-hover) {
+  background-color: var(--scribble-active-soft);
 }
 /* Make room for the sidebar so it doesn't overlap content. */
 body { padding-right: 320px; }
@@ -107,10 +110,27 @@ function bootstrap() {
         sel.removeAllRanges();
       }
     }
-    // Esc closes the active thread card
-    if (e.key === "Escape" && activeId.value) {
-      activeId.value = null;
+    // Esc closes whatever's open
+    if (e.key === "Escape") {
+      if (draftRange.value) draftRange.value = null;
+      else if (activeId.value) activeId.value = null;
     }
+  });
+
+  // Click in the host doc:
+  //   • in scribble chrome → ignore (closed shadow root retargets to host)
+  //   • on an annotated range → open / toggle that annotation's ThreadCard
+  //   • anywhere else → close the active ThreadCard
+  document.addEventListener("click", (e) => {
+    const target = e.target as Element | null;
+    if (target?.closest?.("#scribble-root")) return;
+
+    const id = annotationAt(e.clientX, e.clientY, annotations.value);
+    if (id) {
+      activeId.value = activeId.value === id ? null : id;
+      return;
+    }
+    if (activeId.value) activeId.value = null;
   });
 
   connect();

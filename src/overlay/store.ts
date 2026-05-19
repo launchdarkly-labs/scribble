@@ -11,6 +11,7 @@ import type { Annotation, Selector, WsMessage } from "@/shared/types";
 
 export const annotations = signal<Annotation[]>([]);
 export const activeId = signal<string | null>(null);
+export const hoverId = signal<string | null>(null);
 export const draftRange = signal<Range | null>(null);
 export const connected = signal(false);
 

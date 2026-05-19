@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSignals } from "@preact/signals-react/runtime";
-import { annotations, activeId, connected, unresolved } from "../store";
+import { annotations, activeId, hoverId, connected, unresolved } from "../store";
 import type { Annotation } from "@/shared/types";
 
 export function Sidebar() {
@@ -64,6 +64,12 @@ function Item({ ann }: { ann: Annotation }) {
       className={`item ${isActive ? "active" : ""} ${ann.status === "resolved" ? "resolved" : ""}`}
       onClick={() => {
         activeId.value = isActive ? null : ann.id;
+      }}
+      onMouseEnter={() => {
+        hoverId.value = ann.id;
+      }}
+      onMouseLeave={() => {
+        if (hoverId.value === ann.id) hoverId.value = null;
       }}
       role="button"
       tabIndex={0}
