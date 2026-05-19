@@ -9,7 +9,7 @@
  * (so updates / resolves are appended rather than rewriting the file).
  */
 import { dirname, basename, join, resolve, isAbsolute } from "node:path";
-import { mkdir } from "node:fs/promises";
+import { mkdir, appendFile } from "node:fs/promises";
 import { Annotation } from "@/shared/types";
 
 export function storePathFor(docPath: string): string {
@@ -56,13 +56,23 @@ export async function readAllIncludingDeleted(docPath: string): Promise<Annotati
   return [...latest.values()];
 }
 
+/**
+ * Append one record to the JSONL store atomically.
+ *
+ * We use node:fs/promises `appendFile`, which opens with `O_APPEND` — the
+ * kernel guarantees each write goes to end-of-file in a single atomic
+ * operation. This is critical: the previous implementation read the whole
+ * file, concatenated, and wrote it back, which races catastrophically with
+ * any concurrent write (lost records, stale reads).
+ *
+ * Per POSIX, writes smaller than PIPE_BUF (≥4096 on every platform we care
+ * about) are atomic against concurrent appends and concurrent reads. Our
+ * lines are JSON records, well under that.
+ */
 export async function append(docPath: string, ann: Annotation): Promise<void> {
   const path = storePathFor(docPath);
   await mkdir(dirname(path), { recursive: true });
-  const file = Bun.file(path);
-  const existing = (await file.exists()) ? await file.text() : "";
-  const sep = existing && !existing.endsWith("\n") ? "\n" : "";
-  await Bun.write(path, existing + sep + JSON.stringify(ann) + "\n");
+  await appendFile(path, JSON.stringify(ann) + "\n");
 }
 
 export async function update(

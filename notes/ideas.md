@@ -5,15 +5,23 @@ they ship.
 
 ## Bugs / correctness
 
-- [ ] **Overlay bundle is cached at daemon startup.** Every overlay code change
-  requires `kill <pid>` + restart. Either (a) rebuild on file change via a
-  watcher, or (b) rebuild on every `GET /` in dev. Probably (b) for simplicity
-  — dev-only, prod path serves a pre-built static bundle.
-- [ ] **Read-after-write latency.** `scribble list` immediately after
-  `scribble resolve` shows the old status for one tick. Data on disk is correct.
-  Hypothesis: `Bun.file` stat caching, or kernel page-cache propagation timing.
-  Repro: write a tiny test that PATCHes then GETs in a tight loop. If `Bun.file`
-  is the culprit, swap to `node:fs` `readFile`. ~30 min.
+- [x] **Overlay bundle is cached at daemon startup.** Now rebuilt on every
+  `GET /`. Asset responses are `Cache-Control: no-store`. Source edits show
+  up on browser refresh, no daemon restart.
+- [x] **Read-after-write inconsistency.** Root cause turned out to be much
+  worse than "stale read": `store.append` was a read-modify-write that
+  raced under concurrency, losing records entirely (~50% loss at 8 parallel
+  writers in repro). Replaced with `node:fs/promises.appendFile` which uses
+  `O_APPEND` — kernel-atomic. Repros now show 0/512 lost or stale at 16
+  parallel workers. Test harness at `scratch/parallel-repro.ts` and
+  `scratch/raw-repro.ts`.
+- [ ] **Lost-update race in `store.update`.** Two concurrent PATCHes on the
+  *same annotation id* can both read v1, both compute their own v2, and the
+  later append wins (the earlier one's edit is logically lost — the record
+  is on disk but `readAll` keeps last-by-id). Different class of race from
+  the appendFile one: no data corruption, just last-writer-wins on logical
+  edits. Tolerable for human+agent on the same annotation; worth fixing
+  with a per-doc write mutex if it ever bites.
 
 ## Interaction polish
 

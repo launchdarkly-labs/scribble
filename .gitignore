@@ -4,3 +4,4 @@ dist/
 .scribble-build/
 .scribble/
 *.log
+scratch/.scribble/
