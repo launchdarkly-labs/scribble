@@ -16,6 +16,7 @@ import { ThreadCard } from "./components/ThreadCard";
 import { connect, draftRange, activeId } from "./store";
 import { startHighlightSync } from "./highlights";
 import { initTheme } from "./theme";
+import { initReader } from "./reader";
 // Bun bundles overlay.css as a text string via the css→text loader.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error - text import
@@ -94,6 +95,7 @@ function bootstrap() {
   // Mount React. Theme attributes are set on the shadow host element so our
   // overlay.css :host([data-scribble-theme=…]) selectors react to them.
   initTheme(host);
+  initReader();
 
   const mount = document.createElement("div");
   shadow.appendChild(mount);

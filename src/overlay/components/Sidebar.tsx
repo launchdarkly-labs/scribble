@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSignals } from "@preact/signals-react/runtime";
 import { annotations, activeId, connected, unresolved } from "../store";
 import { theme, cycleTheme } from "../theme";
+import { readerMode, toggleReader } from "../reader";
 import type { Annotation } from "@/shared/types";
 
 export function Sidebar() {
@@ -21,6 +22,7 @@ export function Sidebar() {
             <span className={`dot ${connected.value ? "live" : ""}`} />
             {unresolved.value.length} open
           </span>
+          <ReaderToggle />
           <ThemeToggle />
         </span>
       </header>
@@ -54,6 +56,36 @@ export function Sidebar() {
         )}
       </div>
     </aside>
+  );
+}
+
+function ReaderToggle() {
+  useSignals();
+  const on = readerMode.value;
+  return (
+    <button
+      type="button"
+      className={`theme-toggle ${on ? "on" : ""}`}
+      onClick={toggleReader}
+      title={`Reader mode: ${on ? "on" : "off"} (Flexoki typography for this doc)`}
+      aria-pressed={on}
+      aria-label={`Reader mode ${on ? "on" : "off"}`}
+    >
+      <svg
+        viewBox="0 0 14 14"
+        width="1em"
+        height="1em"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.25}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M2 2.5h4a2 2 0 0 1 2 2v7a2 2 0 0 0-2-2H2zM12 2.5H8a2 2 0 0 0-2 2v7a2 2 0 0 1 2-2h4z" />
+      </svg>
+      <span>reader</span>
+    </button>
   );
 }
 

@@ -110,7 +110,7 @@ export async function startDaemon(opts: DaemonOptions) {
       // The document, with overlay injected
       if (url.pathname === "/" || url.pathname === "/index.html") {
         const original = await docFile.text();
-        const injected = injectOverlay(original, overlayEntry);
+        const injected = injectOverlay(original, overlayEntry, docPath);
         return new Response(injected, {
           headers: { "Content-Type": "text/html; charset=utf-8" },
         });
@@ -206,14 +206,24 @@ async function handleApi(
   return new Response("Method not allowed", { status: 405 });
 }
 
-function injectOverlay(html: string, entryName: string): string {
+function injectOverlay(html: string, entryName: string, docPath: string): string {
+  const safe = docPath.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  const head = `<meta name="scribble-doc" content="${safe}">`;
   const snippet = `
 <!-- scribble overlay -->
 <div id="scribble-root"></div>
 <script type="module" src="/_scribble/assets/${entryName}"></script>
 `;
-  if (html.includes("</body>")) {
-    return html.replace("</body>", `${snippet}\n</body>`);
+  let out = html;
+  if (out.includes("</head>")) {
+    out = out.replace("</head>", `${head}\n</head>`);
+  } else {
+    out = head + out;
   }
-  return html + snippet;
+  if (out.includes("</body>")) {
+    out = out.replace("</body>", `${snippet}\n</body>`);
+  } else {
+    out = out + snippet;
+  }
+  return out;
 }

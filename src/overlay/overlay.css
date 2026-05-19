@@ -154,6 +154,11 @@
   color: var(--ink);
   border-color: var(--rule);
 }
+.theme-toggle.on {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
 .theme-toggle svg { display: block; }
 
 .sidebar-list {
