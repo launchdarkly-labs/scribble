@@ -57,14 +57,29 @@ export function initReader() {
   });
 }
 
-/* Tufte CSS scoped via native CSS nesting, then our font-stack override.
-   `body` etc. inside the wrapper resolve to `:root[data-scribble-reader] body`. */
-const READER_CSS = `
-:root[data-scribble-reader] {
-${tufteCss as string}
+/* Tufte CSS scoped via native CSS nesting.
 
-  /* ── scribble overrides ── */
+   Order inside the wrapper matters:
+     1. RESET   — all: revert on elements the host doc commonly styles, so
+                 author rules in the doc are wiped back to UA defaults.
+     2. TUFTE   — vendored stylesheet sets typography on top of the reset.
+     3. OVERRIDES — our two intentional deviations from Tufte (font stack,
+                    body width to leave room for the sidebar).
 
+   Same selectors, same specificity (0,0,1,1) — source order decides. */
+const RESET = `
+  /* Wipe the host doc's styling on the elements Tufte cares about, so any
+     borders/padding/background/etc. the doc set don't fight Tufte. */
+  body, h1, h2, h3, h4, h5, h6, p,
+  ul, ol, li, dl, dt, dd,
+  blockquote, pre, code,
+  table, thead, tbody, tr, th, td,
+  hr, figure, figcaption, img, a, em, strong, small {
+    all: revert;
+  }
+`;
+
+const OVERRIDES = `
   /* Use the system font stack instead of et-book / Palatino. */
   body {
     font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
@@ -79,5 +94,12 @@ ${tufteCss as string}
     margin-left: 4rem;
     padding-left: 0;
   }
+`;
+
+const READER_CSS = `
+:root[data-scribble-reader] {
+${RESET}
+${tufteCss as string}
+${OVERRIDES}
 }
 `;
