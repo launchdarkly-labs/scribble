@@ -5,8 +5,9 @@
  * Schema is intentionally tiny — sessions are ephemeral.
  */
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, relative, resolve as resolvePath, isAbsolute } from "node:path";
 import { mkdir } from "node:fs/promises";
+import { realpathSync } from "node:fs";
 
 export interface SessionRecord {
   id: string;
@@ -63,7 +64,17 @@ async function writeAll(sessions: SessionRecord[]): Promise<void> {
 }
 
 /**
- * Resolve a session by --doc flag or auto-resolve when only one is live.
+ * Resolve a session, in order of preference:
+ *
+ *   1. --doc <path>           explicit match against the absolute docPath
+ *   2. only one session live  trivially that one
+ *   3. CWD heuristic          if exactly one session's docPath is under the
+ *                             current working directory, use it
+ *   4. otherwise              error and list the relevant candidates
+ *
+ * The CWD heuristic mirrors Hunk's `--repo .` behaviour: when an agent is
+ * working in a project directory, the most likely scribble session is the
+ * one annotating a doc in that project.
  */
 export async function resolveSession(docFlag?: string): Promise<SessionRecord> {
   const sessions = await listSessions();
@@ -71,17 +82,40 @@ export async function resolveSession(docFlag?: string): Promise<SessionRecord> {
     throw new Error("No active scribble sessions. Start one with `scribble open <file.html>`.");
   }
   if (docFlag) {
-    const { resolve, isAbsolute } = await import("node:path");
-    const abs = isAbsolute(docFlag) ? docFlag : resolve(docFlag);
+    const abs = isAbsolute(docFlag) ? docFlag : resolvePath(docFlag);
     const match = sessions.find((s) => s.docPath === abs);
     if (!match) throw new Error(`No session matches --doc ${docFlag}`);
     return match;
   }
-  if (sessions.length > 1) {
-    throw new Error(
-      `Multiple active sessions. Pick one with --doc <path>:\n` +
-        sessions.map((s) => `  ${s.docPath}`).join("\n"),
-    );
+  if (sessions.length === 1) return sessions[0]!;
+
+  // Canonicalize cwd so a symlinked path (e.g. /tmp → /private/tmp on macOS)
+  // doesn't make us miss a perfectly good match.
+  const cwd = realPathSafe(process.cwd());
+  const underCwd = sessions.filter((s) => isUnder(realPathSafe(s.docPath), cwd));
+  if (underCwd.length === 1) return underCwd[0]!;
+
+  const candidates = underCwd.length > 0 ? underCwd : sessions;
+  const hint =
+    underCwd.length > 1
+      ? `Multiple sessions match your current directory. Pick one with --doc <path>:`
+      : `Multiple active sessions. Pick one with --doc <path>:`;
+  throw new Error(
+    `${hint}\n` + candidates.map((s) => `  ${s.docPath}`).join("\n"),
+  );
+}
+
+/** Is `child` strictly under directory `parent`? */
+function isUnder(child: string, parent: string): boolean {
+  const rel = relative(parent, child);
+  return !!rel && !rel.startsWith("..") && !isAbsolute(rel);
+}
+
+/** realpath that falls back to the input if the file doesn't exist. */
+function realPathSafe(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
   }
-  return sessions[0]!;
 }

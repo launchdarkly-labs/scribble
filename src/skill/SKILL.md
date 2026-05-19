@@ -27,7 +27,17 @@ Do NOT reach for scribble when the document is short or the question is broad �
 5. repeat until empty, then summarize in chat
 ```
 
-**Session selection.** If `session list` returns exactly one session, omit `--doc` — every command auto-resolves. Only pass `--doc <path>` when multiple sessions are live.
+**Session selection.** Commands auto-resolve the session in this order:
+
+1. If `--doc <path>` is passed, the session whose docPath matches is used.
+2. Otherwise, if exactly one session is live, that one.
+3. Otherwise, the session whose docPath is under your current working
+   directory — useful when working in a project that has a scribble open
+   on a doc inside it. (Symlinks like `/tmp → /private/tmp` are resolved.)
+4. Otherwise, the CLI errors with the candidate paths so you can pick.
+
+In practice: when you're working in the same directory as the doc, omit
+`--doc`; otherwise pass it explicitly.
 
 **Replies render live in the overlay** via WebSocket — the user sees each reply the moment you send it, no refresh needed. Prefer many short in-the-moment replies over one batch dump at the end.
 
