@@ -49,19 +49,17 @@ they ship.
 
 ## Agent flows
 
-- [ ] **Flow C: agent-initiated annotation.** New CLI:
-  `scribble comment add --doc <path> --quote "..." --summary "..."` that
-  creates an annotation with `author: "agent"`, anchored by searching the
-  document for the quoted text. Forces us to design:
-  - How the human finds out (sidebar badge? a brief overlay flash on the
-    annotated span? both?)
-  - How the human replies — same ThreadCard, just initiated by the agent.
-  - What "resolve" means when an agent asked the question — does the human
-    resolve, or does the agent see the reply and resolve themselves?
-- [ ] **Batch operations: `scribble resolve apply --stdin`.** Skill currently
-  calls this out as a TODO. Accept a JSON array of `{ id, reply, status? }` on
-  stdin, validate the full batch, then mutate. Mirror Hunk's
-  `comment apply --stdin`.
+- [x] **Flow C: agent-initiated annotation.** `scribble comment add --quote
+  ... --summary ...` creates an `author: "agent"` annotation, with server-side
+  anchoring (whitespace-flexible regex fallback, prefix/suffix disambiguation
+  when the quote isn't unique). The overlay auto-opens the ThreadCard on
+  receipt so the human notices the question. The agent resolves once the
+  reply is in.
+- [x] **Batch operations: `scribble resolve apply --stdin`.** Accepts either
+  `{ items: [...] }` or a bare array of `{ id, reply?, status? }`. Items
+  with a reply default to `status: resolved`. Daemon validates the full
+  batch, applies sequentially, broadcasts each upsert, returns counts +
+  per-id not-found list.
 
 ## Robustness
 

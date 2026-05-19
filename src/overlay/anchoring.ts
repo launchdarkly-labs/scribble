@@ -23,9 +23,15 @@ function flatten(root: Node): { text: string; nodes: Text[]; offsets: number[] }
   let text = "";
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
-      // Skip text inside our own overlay
       const parent = (node as Text).parentElement;
-      if (parent?.closest("#scribble-root")) return NodeFilter.FILTER_REJECT;
+      if (!parent) return NodeFilter.FILTER_REJECT;
+      // Skip text inside our own overlay
+      if (parent.closest("#scribble-root")) return NodeFilter.FILTER_REJECT;
+      // Skip script/style — server-side anchoring strips these too
+      const tag = parent.tagName;
+      if (tag === "SCRIPT" || tag === "STYLE" || tag === "NOSCRIPT") {
+        return NodeFilter.FILTER_REJECT;
+      }
       return NodeFilter.FILTER_ACCEPT;
     },
   });
@@ -130,25 +136,42 @@ function findQuote(
 ): { start: number; end: number } | null {
   const exact = q.exact;
   if (!exact) return null;
-  const candidates: number[] = [];
+  let candidates: { start: number; end: number }[] = [];
   let from = 0;
   while (true) {
     const i = haystack.indexOf(exact, from);
     if (i === -1) break;
-    candidates.push(i);
+    candidates.push({ start: i, end: i + exact.length });
     from = i + 1;
     if (candidates.length > 50) break; // safety
   }
+  // Fallback: whitespace-flexible match (handles server-vs-DOM whitespace drift).
+  if (candidates.length === 0) {
+    const escaped = exact
+      .trim()
+      .replace(/[\\.+*?^$(){}|[\]]/g, "\\$&")
+      .replace(/\s+/g, "\\s+");
+    try {
+      const re = new RegExp(escaped, "g");
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(haystack)) !== null) {
+        candidates.push({ start: m.index, end: m.index + m[0].length });
+        if (candidates.length > 50) break;
+        if (m.index === re.lastIndex) re.lastIndex++;
+      }
+    } catch {
+      /* malformed regex — give up */
+    }
+  }
   if (candidates.length === 0) return null;
-  if (candidates.length === 1)
-    return { start: candidates[0]!, end: candidates[0]! + exact.length };
+  if (candidates.length === 1) return candidates[0]!;
 
   // Disambiguate by prefix/suffix overlap
   let best = candidates[0]!;
   let bestScore = -1;
   for (const c of candidates) {
-    const prefix = haystack.slice(Math.max(0, c - CONTEXT_LEN), c);
-    const suffix = haystack.slice(c + exact.length, c + exact.length + CONTEXT_LEN);
+    const prefix = haystack.slice(Math.max(0, c.start - CONTEXT_LEN), c.start);
+    const suffix = haystack.slice(c.end, c.end + CONTEXT_LEN);
     const score =
       suffixOverlap(q.prefix ?? "", prefix) + prefixOverlap(q.suffix ?? "", suffix);
     if (score > bestScore) {
@@ -156,7 +179,7 @@ function findQuote(
       best = c;
     }
   }
-  return { start: best, end: best + exact.length };
+  return best;
 }
 
 function suffixOverlap(a: string, b: string): number {

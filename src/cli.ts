@@ -10,6 +10,7 @@ import { list } from "./commands/list";
 import { get } from "./commands/get";
 import { resolve as resolveCmd } from "./commands/resolve";
 import { session } from "./commands/session";
+import { comment } from "./commands/comment";
 
 const argv = process.argv.slice(2);
 const [cmd, ...rest] = argv;
@@ -24,6 +25,8 @@ async function main() {
       return get(rest);
     case "resolve":
       return resolveCmd(rest);
+    case "comment":
+      return comment(rest);
     case "session":
       return session(rest);
     case "--version":
@@ -53,6 +56,9 @@ COMMANDS
   list [--unresolved] [--json]  List annotations on the active doc
   get <id> [--doc <path>]       Show one annotation
   resolve <id> --reply "..."    Resolve an annotation with an optional reply
+  resolve apply --stdin         Apply a batch of resolves/replies from JSON stdin
+  comment add --quote "..." --summary "..."
+                                Create an agent-authored annotation pinned to a quoted span
   session list [--json]         List active daemon sessions
 
 GLOBAL

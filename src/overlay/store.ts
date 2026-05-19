@@ -42,10 +42,22 @@ export function connect() {
   };
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data) as WsMessage;
-    if (msg.type === "snapshot") annotations.value = msg.annotations;
-    else if (msg.type === "upsert") annotations.value = upsert(annotations.value, msg.annotation);
-    else if (msg.type === "remove")
+    if (msg.type === "snapshot") {
+      annotations.value = msg.annotations;
+    } else if (msg.type === "upsert") {
+      const isNew = !annotations.value.some((a) => a.id === msg.annotation.id);
+      annotations.value = upsert(annotations.value, msg.annotation);
+      // Auto-open fresh agent-authored questions so the user sees them.
+      if (
+        isNew &&
+        msg.annotation.author === "agent" &&
+        msg.annotation.status === "open"
+      ) {
+        activeId.value = msg.annotation.id;
+      }
+    } else if (msg.type === "remove") {
       annotations.value = annotations.value.filter((a) => a.id !== msg.id);
+    }
   };
 }
 

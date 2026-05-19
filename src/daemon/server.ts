@@ -10,6 +10,7 @@ import { ulid } from "ulid";
 import { Annotation, type WsMessage } from "@/shared/types";
 import { z } from "zod";
 import * as store from "./store";
+import { findInDoc } from "./anchoring";
 
 const CreateBody = Annotation.omit({
   id: true,
@@ -33,6 +34,33 @@ const PatchBody = z.object({
 
 const RemoveReply = z.object({
   replyIndex: z.number().int().nonnegative(),
+});
+
+const ByQuoteBody = z.object({
+  quote: z.string().min(1),
+  prefix: z.string().optional(),
+  suffix: z.string().optional(),
+  summary: z.string().min(1),
+  author: z.enum(["human", "agent"]).default("agent"),
+});
+
+const BatchItem = z
+  .object({
+    id: z.string(),
+    status: z.enum(["open", "resolved"]).optional(),
+    reply: z
+      .object({
+        body: z.string().min(1),
+        author: z.enum(["human", "agent"]).default("agent"),
+      })
+      .optional(),
+  })
+  .refine((v) => v.status !== undefined || v.reply !== undefined, {
+    message: "each batch item must set status, reply, or both",
+  });
+
+const BatchBody = z.object({
+  items: z.array(BatchItem).min(1).max(200),
 });
 
 interface DaemonOptions {
@@ -144,6 +172,65 @@ async function handleApi(
   docPath: string,
   broadcast: (msg: WsMessage) => void,
 ): Promise<Response> {
+  // ── Create-by-quote (agent-initiated, Flow C) ──
+  if (req.method === "POST" && url.pathname === "/_scribble/api/annotations/by-quote") {
+    const body = ByQuoteBody.parse(await req.json());
+    const html = await Bun.file(docPath).text();
+    const found = findInDoc(html, body.quote, body.prefix, body.suffix);
+    if (!found.ok) return new Response(found.error, { status: 400 });
+    const now = new Date().toISOString();
+    const ann: Annotation = {
+      id: `ann_${ulid()}`,
+      target: {
+        source: docPath,
+        selector: [
+          {
+            type: "TextQuoteSelector",
+            exact: found.exact,
+            prefix: found.prefix,
+            suffix: found.suffix,
+          },
+        ],
+      },
+      body: { type: "TextualBody", value: body.summary },
+      author: body.author,
+      status: "open",
+      replies: [],
+      created: now,
+      updated: now,
+    };
+    await store.append(docPath, ann);
+    broadcast({ type: "upsert", annotation: ann });
+    return Response.json(ann, { status: 201 });
+  }
+
+  // ── Batch apply (agent batch resolve / reply) ──
+  if (req.method === "POST" && url.pathname === "/_scribble/api/annotations/batch") {
+    const body = BatchBody.parse(await req.json());
+    const updated: Annotation[] = [];
+    const notFound: string[] = [];
+    for (const item of body.items) {
+      const next = await store.update(docPath, item.id, (prev) => ({
+        ...prev,
+        status: item.status ?? prev.status,
+        replies: item.reply
+          ? [
+              ...prev.replies,
+              { author: item.reply.author, body: item.reply.body, created: new Date().toISOString() },
+            ]
+          : prev.replies,
+        updated: new Date().toISOString(),
+      }));
+      if (next) {
+        broadcast({ type: "upsert", annotation: next });
+        updated.push(next);
+      } else {
+        notFound.push(item.id);
+      }
+    }
+    return Response.json({ updated: updated.length, notFound, results: updated });
+  }
+
   const m = url.pathname.match(/^\/_scribble\/api\/annotations(?:\/([^/]+))?$/);
   if (!m) return new Response("Not found", { status: 404 });
   const id = m[1];

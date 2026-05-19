@@ -38,6 +38,8 @@ scribble session list [--json]                  # active daemons
 scribble list [--unresolved] [--json] [--doc <path>]
 scribble get <id> [--doc <path>]                # full annotation, includes quoted text
 scribble resolve <id> --reply "..." [--doc <path>]
+scribble resolve apply --stdin [--doc <path>]   # batch resolve / reply
+scribble comment add --quote "..." --summary "..." [--prefix "..."] [--suffix "..."] [--doc <path>]
 ```
 
 Each annotation includes:
@@ -68,12 +70,65 @@ Don't fetch the served `http://localhost:<port>/` — that includes our injected
 - **Address structural / correctness annotations before nits.** Group related ones in a single reply when it makes sense.
 - **Don't pad.** Reply length should match the annotation's substance. Test annotations get one line. Real critique gets real engagement.
 
-## Batching
+## Asking the human a targeted question (Flow C)
 
-There is no `comment apply --stdin` yet (planned). For now, when there are many annotations:
+When you need feedback on a specific span mid-task — e.g. "is this number
+right?" or "should this section stay?" — pin a question to the span instead
+of asking in chat. The user sees it light up in their overlay and can reply
+in place.
 
-- Do them one at a time with sequential `scribble resolve` calls — each reply is broadcast live to the user
-- Save the chat summary for the end; the per-annotation replies in the overlay are where the user actually reads your work
+```bash
+scribble comment add \
+  --quote "Q3 revenue grew 12%" \
+  --summary "Is this the correct figure? I'm seeing 11.4% in the source data."
+```
+
+If the quote appears more than once in the doc, the daemon will reject the
+create; pass `--prefix` and/or `--suffix` (≈32 chars of surrounding text)
+to disambiguate:
+
+```bash
+scribble comment add \
+  --quote "step 3" \
+  --prefix "on to " \
+  --suffix " of the migration" \
+  --summary "Did you intend to ship this before or after the deprecation?"
+```
+
+What happens next:
+
+- Annotation appears in the user's sidebar **and** auto-opens its ThreadCard
+  so they notice the question.
+- They reply through the overlay; you see their reply on the next
+  `scribble list` or `scribble get <id>`.
+- **You** resolve the annotation when the question is settled (the human
+  doesn't usually resolve agent-asked questions).
+
+Don't overuse this. A targeted question is great; an interrogation isn't. If
+you have many questions, write them up in chat instead.
+
+## Batching resolves and replies
+
+When you have several annotations to address, prefer one batch over N shell
+invocations:
+
+```bash
+cat <<'JSON' | scribble resolve apply --stdin
+{
+  "items": [
+    { "id": "ann_01H...", "reply": "applied; moved this paragraph up" },
+    { "id": "ann_01H...", "reply": "good catch — fixed the off-by-one" },
+    { "id": "ann_01H...", "status": "open", "reply": "pushing back: this is intentional, see §3" }
+  ]
+}
+JSON
+```
+
+Accepted shapes on stdin: either the wrapped `{ "items": [...] }` form above,
+or a bare array `[ { "id": ..., "reply": ... }, ... ]`. Items without an
+explicit `status` but with a `reply` are auto-set to `resolved` (set
+`"status": "open"` explicitly when you want to leave it open). Replies
+default to `author: "agent"`.
 
 ## Common errors
 
