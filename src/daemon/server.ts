@@ -75,32 +75,44 @@ export async function startDaemon(opts: DaemonOptions) {
     throw new Error(`Document not found: ${docPath}`);
   }
 
-  // Build the overlay bundle once on startup (dev path).
-  const overlayBuild = await Bun.build({
-    entrypoints: [new URL("../overlay/main.tsx", import.meta.url).pathname],
-    target: "browser",
-    format: "esm",
-    minify: false,
-    sourcemap: "inline",
-    loader: { ".css": "text" },
-  });
-  if (!overlayBuild.success) {
-    for (const log of overlayBuild.logs) console.error(log);
-    throw new Error("Overlay build failed");
-  }
-  const overlayAssets = new Map<string, { content: ArrayBuffer; type: string }>();
-  for (const out of overlayBuild.outputs) {
-    const name = out.path.replace(/^.*[\\/]/, "");
-    overlayAssets.set(name, {
-      content: await out.arrayBuffer(),
-      type:
-        out.kind === "entry-point" || out.kind === "chunk"
-          ? "application/javascript; charset=utf-8"
-          : "text/css; charset=utf-8",
+  // The overlay is rebuilt on every doc reload in dev so source edits show
+  // up without restarting the daemon. The build typically takes <100ms and
+  // its result is reused for asset requests until the next doc reload.
+  type Overlay = {
+    assets: Map<string, { content: ArrayBuffer; type: string }>;
+    entry: string;
+  };
+  async function buildOverlay(): Promise<Overlay> {
+    const result = await Bun.build({
+      entrypoints: [new URL("../overlay/main.tsx", import.meta.url).pathname],
+      target: "browser",
+      format: "esm",
+      minify: false,
+      sourcemap: "inline",
+      loader: { ".css": "text" },
     });
+    if (!result.success) {
+      for (const log of result.logs) console.error(log);
+      throw new Error("Overlay build failed");
+    }
+    const assets = new Map<string, { content: ArrayBuffer; type: string }>();
+    for (const out of result.outputs) {
+      const name = out.path.replace(/^.*[\\/]/, "");
+      assets.set(name, {
+        content: await out.arrayBuffer(),
+        type:
+          out.kind === "entry-point" || out.kind === "chunk"
+            ? "application/javascript; charset=utf-8"
+            : "text/css; charset=utf-8",
+      });
+    }
+    const entry =
+      result.outputs.find((o) => o.kind === "entry-point")?.path.replace(/^.*[\\/]/, "") ??
+      "main.js";
+    return { assets, entry };
   }
-  const overlayEntry =
-    overlayBuild.outputs.find((o) => o.kind === "entry-point")?.path.replace(/^.*[\\/]/, "") ?? "main.js";
+
+  let overlay: Overlay = await buildOverlay();
 
   // WebSocket clients
   const wsClients = new Set<Bun.ServerWebSocket<unknown>>();
@@ -123,10 +135,13 @@ export async function startDaemon(opts: DaemonOptions) {
       // Overlay assets
       if (url.pathname.startsWith("/_scribble/assets/")) {
         const name = url.pathname.replace("/_scribble/assets/", "");
-        const asset = overlayAssets.get(name);
+        const asset = overlay.assets.get(name);
         if (!asset) return new Response("Not found", { status: 404 });
         return new Response(asset.content, {
-          headers: { "Content-Type": asset.type },
+          headers: {
+            "Content-Type": asset.type,
+            "Cache-Control": "no-store",
+          },
         });
       }
 
@@ -135,12 +150,24 @@ export async function startDaemon(opts: DaemonOptions) {
         return handleApi(req, url, docPath, broadcast);
       }
 
-      // The document, with overlay injected
+      // The document, with overlay injected. Rebuild the overlay first so
+      // source edits are picked up without restarting the daemon. On build
+      // error we keep serving the previous successful build.
       if (url.pathname === "/" || url.pathname === "/index.html") {
-        const original = await docFile.text();
-        const injected = injectOverlay(original, overlayEntry);
+        try {
+          overlay = await buildOverlay();
+        } catch (err) {
+          console.error(
+            `[scribble] overlay rebuild failed, serving previous: ${(err as Error).message}`,
+          );
+        }
+        const original = await Bun.file(docPath).text();
+        const injected = injectOverlay(original, overlay.entry);
         return new Response(injected, {
-          headers: { "Content-Type": "text/html; charset=utf-8" },
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-store",
+          },
         });
       }
 
