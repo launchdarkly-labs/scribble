@@ -4,7 +4,7 @@ Guide for agents working **on** the scribble codebase. (Agents working **with** 
 
 ## What this is
 
-A local annotation tool: a daemon serves any HTML document with an overlay where humans select text and leave comments; agents read those comments via CLI and reply. Think Hunk-for-diffs but for arbitrary HTML.
+A local annotation tool: a daemon serves any HTML document with an overlay where humans select text and leave comments; agents read those comments via CLI and reply. Targeted at reviewing the long HTML specs and artifacts that agents now routinely produce.
 
 Three actors:
 

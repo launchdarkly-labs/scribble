@@ -1,15 +1,13 @@
 # scribble
 
-> Local annotation layer for HTML documents, so humans and agents can
-> collaborate on rich artifacts the way [Hunk](https://github.com/) lets
-> them collaborate on diffs.
+> **Inline review for HTML specs you build with agents.**
 
 You point scribble at any HTML file. It serves the file in your browser
 with a thin annotation sidebar overlaid on top. You highlight text and
 leave comments. Your agent reads them via CLI and replies. The agent can
 also pin its own questions to specific spans, and you reply back. The
 document on disk is never touched; comments live in a sidecar JSONL file
-beside it.
+beside it. Local-first, no service, no account.
 
 ## Install
 
@@ -74,8 +72,8 @@ scribble session list [--json]
 ```
 
 When multiple sessions are live, commands auto-resolve to the one whose
-document path is under your current working directory (Hunk's
-`--repo .` pattern). Otherwise pass `--doc <path>`.
+document path is under your current working directory. Otherwise pass
+`--doc <path>`.
 
 ## Hacking on it
 

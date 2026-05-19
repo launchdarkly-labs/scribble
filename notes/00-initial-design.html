@@ -77,7 +77,7 @@
 <section>
   <h2>The problem</h2>
   <p>Agents are getting good at producing rich HTML artifacts — reports, dashboards, design docs — and HTML carries far more context than Markdown. But reviewing long agent-generated HTML hits a familiar wall: there is no good way to <em>point at</em> a paragraph and say "this number looks wrong" or "expand this" without copy-pasting fragments back into chat.</p>
-  <p>Tools like <strong>Hunk</strong>, <strong>Codiff</strong>, and <strong>Dunk</strong> have solved this for code diffs: a local daemon holds review state, a UI lets the human leave inline notes, and the agent reads and responds via CLI. We want the same loop, but for arbitrary HTML.</p>
+  <p>A handful of recent terminal-side review tools have solved this for code diffs: a local daemon holds review state, a UI lets the human leave inline notes, and the agent reads and responds via CLI. We want the same loop, but for arbitrary HTML.</p>
 </section>
 
 <section>
@@ -149,7 +149,7 @@ scribble resolve &lt;id&gt; --reply "..."      # close with a response the user 
 scribble comment add --doc report.html \ # agent asks the human a question
     --quote "..." --summary "..."
 scribble watch                           # stream changes (SSE)</code></pre>
-  <p>JSON everywhere. Batch <code>resolve apply --stdin</code> for multi-comment replies. Session selection by <code>--doc &lt;path&gt;</code>, mirroring Hunk's <code>--repo</code>.</p>
+  <p>JSON everywhere. Batch <code>resolve apply --stdin</code> for multi-comment replies. Session selection by <code>--doc &lt;path&gt;</code>, with a CWD-based auto-resolve when only one session matches.</p>
 </section>
 
 <section>
@@ -188,7 +188,7 @@ scribble watch                           # stream changes (SSE)</code></pre>
 <section>
   <h2>Open questions <span class="tag">discuss</span></h2>
   <ul>
-    <li>One doc per daemon, or multi-doc sessions like Hunk?</li>
+    <li>One doc per daemon, or multi-doc sessions?</li>
     <li>Re-anchor eagerly on file change or lazily on read?</li>
     <li>Agent replies as threaded notes, or just status + reply field?</li>
     <li><strong>Annotation UI:</strong> what does a <em>modern</em> overlay look like? Margin notes? Floating bubbles? Linear sidebar? Linear-style command bar? This is the next thing to noodle on.</li>

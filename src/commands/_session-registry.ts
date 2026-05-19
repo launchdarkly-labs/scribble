@@ -72,9 +72,9 @@ async function writeAll(sessions: SessionRecord[]): Promise<void> {
  *                             current working directory, use it
  *   4. otherwise              error and list the relevant candidates
  *
- * The CWD heuristic mirrors Hunk's `--repo .` behaviour: when an agent is
- * working in a project directory, the most likely scribble session is the
- * one annotating a doc in that project.
+ * The CWD heuristic: when an agent is working in a project directory, the
+ * most likely scribble session is the one annotating a doc in that project.
+ * Same idea code-review tools use when matching by repo root.
  */
 export async function resolveSession(docFlag?: string): Promise<SessionRecord> {
   const sessions = await listSessions();

@@ -5,7 +5,7 @@ description: Collaborates with humans on HTML documents through the Scribble loc
 
 # Scribble Review
 
-Scribble is a local annotation tool: a daemon serves an HTML document with an overlay where the human selects text and leaves comments. The agent reads those comments and replies via CLI. This is the HTML analogue of Hunk for diffs.
+Scribble is a local annotation tool: a daemon serves an HTML document with an overlay where the human selects text and leaves comments. The agent reads those comments and replies via CLI. Built for reviewing the long HTML specs and artifacts agents produce.
 
 The TUI/browser is for the user. Do NOT open URLs or screenshot the overlay. Use `scribble` CLI commands to inspect and mutate annotations.
 
