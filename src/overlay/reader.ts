@@ -100,9 +100,9 @@ const READER_CSS = `
   color: var(--srdr-ink);
   font-family: system-ui, -apple-system, "SF Pro Text", sans-serif;
   font-size: 1.0625rem;
-  line-height: 1.65;
-  /* Leave space for the sidebar (20rem) + breathing room */
-  padding: 3rem calc(20rem + 2rem) 6rem 0;
+  line-height: 1.7;
+  /* Leave space for the sidebar (20rem) on the right; symmetric breathing on the left. */
+  padding: 4rem calc(20rem + 2rem) 6rem 2rem;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -127,17 +127,15 @@ const READER_CSS = `
   line-height: 1.25;
   letter-spacing: -0.01em;
 }
-:root[data-scribble-reader] h1 { font-size: 2rem; margin: 0 auto 0.5rem; }
-:root[data-scribble-reader] h2 {
-  font-size: 1.375rem;
-  margin: 2.5rem auto 0.75rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--srdr-rule);
-}
-:root[data-scribble-reader] h3 { font-size: 1.125rem; margin: 1.75rem auto 0.5rem; }
-:root[data-scribble-reader] h4 {
-  font-size: 0.9rem;
-  margin: 1.5rem auto 0.4rem;
+/* Hierarchy is carried by weight + space, not rules. */
+:root[data-scribble-reader] h1 { font-size: 2.25rem; margin: 0 auto 0.75rem; }
+:root[data-scribble-reader] h2 { font-size: 1.5rem;  margin: 3rem auto 0.5rem; }
+:root[data-scribble-reader] h3 { font-size: 1.125rem; margin: 2rem auto 0.4rem; }
+:root[data-scribble-reader] h4 { font-size: 1rem;     margin: 1.5rem auto 0.4rem; }
+:root[data-scribble-reader] h5,
+:root[data-scribble-reader] h6 {
+  font-size: 0.85rem;
+  margin: 1.25rem auto 0.4rem;
   color: var(--srdr-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -145,9 +143,11 @@ const READER_CSS = `
 }
 
 :root[data-scribble-reader] p {
-  margin: 0 auto 1rem;
+  margin: 0 auto 1.1rem;
   font-size: 1rem;
 }
+/* Tighten the first paragraph after a heading. */
+:root[data-scribble-reader] :is(h1, h2, h3, h4, h5, h6) + p { margin-top: 0; }
 
 :root[data-scribble-reader] strong { font-weight: 600; }
 :root[data-scribble-reader] em { font-style: italic; }
@@ -189,9 +189,9 @@ const READER_CSS = `
 }
 
 :root[data-scribble-reader] blockquote {
-  margin: 1.25rem auto;
+  margin: 1.5rem auto;
   padding: 0.1rem 0 0.1rem 1rem;
-  border-left: 3px solid var(--srdr-accent);
+  border-left: 2px solid var(--srdr-rule);
   color: var(--srdr-muted);
   font-style: italic;
 }
@@ -208,25 +208,29 @@ const READER_CSS = `
 :root[data-scribble-reader] hr {
   border: 0;
   border-top: 1px solid var(--srdr-rule);
-  margin: 2.5rem auto;
+  margin: 3rem auto;
+  width: 4rem;
 }
 
+/* Tables: horizontal rules only, in keeping with Flexoki's understated look. */
 :root[data-scribble-reader] table {
   border-collapse: collapse;
-  margin: 1.25rem auto;
-  font-size: 0.9rem;
+  margin: 1.5rem auto;
+  font-size: 0.95rem;
   width: 100%;
 }
 :root[data-scribble-reader] th,
 :root[data-scribble-reader] td {
-  border: 1px solid var(--srdr-rule);
-  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--srdr-rule);
+  padding: 0.6rem 0.75rem;
   text-align: left;
   vertical-align: top;
 }
 :root[data-scribble-reader] th {
-  background: var(--srdr-surface);
   font-weight: 600;
+  border-bottom-color: var(--srdr-ink);
+  color: var(--srdr-ink);
 }
 
 :root[data-scribble-reader] img,
