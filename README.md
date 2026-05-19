@@ -1,44 +1,80 @@
 # scribble
 
-Local-first annotation layer for HTML documents, so humans and agents can collaborate on rich artifacts the way Hunk lets them collaborate on diffs.
+Local-first annotation layer for HTML documents, so humans and agents can
+collaborate on rich artifacts the way [Hunk](https://github.com/) lets them
+collaborate on diffs.
 
-## Status
+## Install
 
-Pre-v0 scaffold. Architecture is locked, the spine works end-to-end (open → select → comment → persist → broadcast → see in sidebar), the polish is not. See `notes/00-initial-design.html` for the current thinking.
+Requires [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install | bash`).
+
+```bash
+git clone <this-repo> ~/projects/scribble
+cd ~/projects/scribble
+bun install
+bun link              # registers `scribble` on your PATH (via ~/.bun/bin)
+```
+
+That's it. `~/.bun/bin/scribble` is now a symlink chain back to
+`src/cli.ts` in this repo. `git pull` updates everything — no rebuild step.
+
+To uninstall: `bun unlink` from this directory.
 
 ## Quickstart
 
 ```bash
-bun install
-bun run dev open notes/00-initial-design.html
+scribble open ./some.html          # starts the daemon, opens a browser tab
 ```
 
-Open http://localhost:7878. Select text in the document and a comment box appears. Comments are written to `.scribble/<doc>.jsonl` next to the file.
+Select text in the document, click the `Comment` pill (or hit `⌘K`), type, `⌘↩`. Comments are written to `.scribble/<doc>.jsonl` next to the file.
 
 ## CLI
 
 ```bash
-scribble open <file.html>            # start daemon, open browser
+scribble open <file.html> [--detach] [--no-open]
+                                     # start a daemon for that doc
+scribble session list [--json]       # which daemons are running
 scribble list [--unresolved] [--json] [--doc <path>]
 scribble get <id> [--doc <path>]
 scribble resolve <id> --reply "..." [--doc <path>]
-scribble session list [--json]
+scribble resolve apply --stdin       # batch resolve/reply from JSON stdin
+scribble comment add --quote "..." --summary "..."
+                                     # agent-initiated annotation (Flow C)
 ```
 
-All commands hit the running daemon over HTTP. The agent skill in `src/skill/SKILL.md` teaches agents the loop.
+Session selection auto-resolves in this order: `--doc` match, single session, or single session whose docPath is under your current working directory.
 
-## Build
+## Agent integration
 
-```bash
-bun run build                        # cross-compiles binaries to dist/
-```
-
-Produces `scribble-darwin-arm64`, `scribble-linux-x64`, etc. via `bun build --compile`.
+There's a skill at `src/skill/SKILL.md` that teaches agents the workflow. Point your agent at it via its absolute path; the skill itself explains the commands, the three collaboration flows, and the hard rules (resolve with substantive replies, don't edit sections with open annotations pointing into them, etc.).
 
 ## Architecture
 
-- **Daemon**: `Bun.serve()` — HTTP API + WebSocket, serves user doc with overlay injected
-- **Overlay**: React 18 + `@preact/signals-react` + Base UI, mounted into a closed shadow root on the user's doc
-- **Anchoring**: W3C TextQuoteSelector + TextPositionSelector, rendered via CSS Custom Highlight API
-- **Storage**: JSONL sidecar at `.scribble/<doc>.jsonl`
-- **Distribution**: single self-contained binary per platform via `bun build --compile`
+- **Daemon**: `Bun.serve()` HTTP + WebSocket; serves the user's HTML with our overlay injected near `</body>`. Watches the source file and broadcasts `doc-changed` on edits.
+- **Overlay**: React 19 + `@preact/signals-react`, mounted into a closed shadow root. The host doc and the scribble chrome never see each other's CSS.
+- **Anchoring**: W3C `TextQuoteSelector` (with prefix/suffix disambiguation) + `TextPositionSelector` fallback, rendered via the CSS Custom Highlight API — no DOM mutation of the host doc.
+- **Storage**: append-only JSONL per doc at `.scribble/<doc>.jsonl`, kernel-atomic via `O_APPEND`.
+- **Distribution**: `bun link` for the linked source install (current). Compiled single-binary distribution via `bun build --compile` is wired in `build.ts` but not yet the default path — it needs the overlay-asset embedding work before it's user-ready.
+
+## Layout
+
+```
+src/
+  cli.ts                 subcommand router
+  commands/              open, list, get, resolve, comment, session
+  daemon/
+    server.ts            Bun.serve + WS + file watcher
+    store.ts             JSONL read/append (O_APPEND atomic)
+    anchoring.ts         server-side quote-to-selectors (Flow C)
+  overlay/
+    main.tsx             React mount + global keyboard/click/hover
+    anchoring.ts         describe/locate W3C selectors in the live DOM
+    highlights.ts        CSS.highlights sync (open / resolved / active / hover)
+    store.ts             signals + WebSocket sync + orphan tracking
+    components/          Sidebar, SelectionPill, DraftCard, ThreadCard
+    overlay.css          shadow-root-scoped styles
+  shared/types.ts        zod schemas shared by daemon + overlay
+  skill/SKILL.md         agent instructions
+notes/                   design notes + ideas
+scratch/                 ad-hoc test harnesses (parallel-repro.ts etc.)
+```
