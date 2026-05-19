@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useSignals } from "@preact/signals-react/runtime";
 import { annotations, activeId, connected, unresolved } from "../store";
-import { theme, cycleTheme } from "../theme";
-import { readerMode, toggleReader } from "../reader";
 import type { Annotation } from "@/shared/types";
 
 export function Sidebar() {
@@ -17,13 +15,9 @@ export function Sidebar() {
     <aside className="sidebar">
       <header className="sidebar-header">
         <span className="sidebar-title">Scribble</span>
-        <span className="sidebar-actions">
-          <span className="sidebar-status">
-            <span className={`dot ${connected.value ? "live" : ""}`} />
-            {unresolved.value.length} open
-          </span>
-          <ReaderToggle />
-          <ThemeToggle />
+        <span className="sidebar-status">
+          <span className={`dot ${connected.value ? "live" : ""}`} />
+          {unresolved.value.length} open
         </span>
       </header>
       <div className="sidebar-list">
@@ -56,89 +50,6 @@ export function Sidebar() {
         )}
       </div>
     </aside>
-  );
-}
-
-function ReaderToggle() {
-  useSignals();
-  const on = readerMode.value;
-  return (
-    <button
-      type="button"
-      className={`theme-toggle ${on ? "on" : ""}`}
-      onClick={toggleReader}
-      title={`Reader mode: ${on ? "on" : "off"} (Flexoki typography for this doc)`}
-      aria-pressed={on}
-      aria-label={`Reader mode ${on ? "on" : "off"}`}
-    >
-      <svg
-        viewBox="0 0 14 14"
-        width="1em"
-        height="1em"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.25}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M2 2.5h4a2 2 0 0 1 2 2v7a2 2 0 0 0-2-2H2zM12 2.5H8a2 2 0 0 0-2 2v7a2 2 0 0 1 2-2h4z" />
-      </svg>
-      <span>reader</span>
-    </button>
-  );
-}
-
-function ThemeIcon({ t }: { t: "auto" | "light" | "dark" }) {
-  // 14×14 viewBox, 1.25-unit stroke, currentColor — designed to match
-  // the text x-height when sized at 1em so flexbox center-aligns it.
-  const common = {
-    viewBox: "0 0 14 14",
-    width: "1em",
-    height: "1em",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.25,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-  };
-  if (t === "auto")
-    return (
-      <svg {...common}>
-        <circle cx="7" cy="7" r="4.5" />
-        <path d="M7 2.5v9" />
-        <path d="M7 2.5a4.5 4.5 0 0 1 0 9z" fill="currentColor" stroke="none" />
-      </svg>
-    );
-  if (t === "light")
-    return (
-      <svg {...common}>
-        <circle cx="7" cy="7" r="2.25" />
-        <path d="M7 1.5v1.5M7 11v1.5M1.5 7h1.5M11 7h1.5M3.1 3.1l1.05 1.05M9.85 9.85l1.05 1.05M3.1 10.9l1.05-1.05M9.85 4.15l1.05-1.05" />
-      </svg>
-    );
-  return (
-    <svg {...common}>
-      <path d="M11.5 8.2A4.5 4.5 0 1 1 5.8 2.5a3.6 3.6 0 0 0 5.7 5.7z" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function ThemeToggle() {
-  useSignals();
-  const t = theme.value;
-  return (
-    <button
-      type="button"
-      className="theme-toggle"
-      onClick={cycleTheme}
-      title={`Theme: ${t} (click to cycle)`}
-      aria-label={`Theme: ${t}`}
-    >
-      <ThemeIcon t={t} />
-      <span>{t}</span>
-    </button>
   );
 }
 

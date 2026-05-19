@@ -15,8 +15,6 @@ import { DraftCard } from "./components/DraftCard";
 import { ThreadCard } from "./components/ThreadCard";
 import { connect, draftRange, activeId } from "./store";
 import { startHighlightSync } from "./highlights";
-import { initTheme } from "./theme";
-import { initReader } from "./reader";
 // Bun bundles overlay.css as a text string via the css→text loader.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error - text import
@@ -24,27 +22,20 @@ import overlayCss from "./overlay.css";
 
 // CSS for the Highlight API ranges — must live in the host document because
 // ::highlight() applies to the host's text nodes, not the shadow root's.
-// Flexoki palette; theme switching is driven by [data-scribble-theme] on :root.
 const HOST_STYLES = `
 :root {
-  --scribble-accent:      #A02F6F;  /* flexoki magenta */
-  --scribble-accent-soft: color-mix(in oklch, #A02F6F 10%, #FFFCF0);
-  --scribble-active-soft: color-mix(in oklch, #A02F6F 22%, #FFFCF0);
-  --scribble-resolved:    #B7B5AC;  /* flexoki base-300 */
+  --scribble-accent: oklch(60% 0.33 340);
+  --scribble-accent-soft: oklch(96% 0.012 340);
+  --scribble-active-soft: oklch(92% 0.04 340);
+  --scribble-resolved: oklch(70% 0.005 280);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-scribble-theme="light"]) {
-    --scribble-accent:      #CE5D97;
-    --scribble-accent-soft: color-mix(in oklch, #CE5D97 16%, #1C1B1A);
-    --scribble-active-soft: color-mix(in oklch, #CE5D97 28%, #1C1B1A);
-    --scribble-resolved:    #575653;
+  :root {
+    --scribble-accent: oklch(72% 0.18 340);
+    --scribble-accent-soft: oklch(26% 0.04 340);
+    --scribble-active-soft: oklch(34% 0.08 340);
+    --scribble-resolved: oklch(45% 0.005 280);
   }
-}
-:root[data-scribble-theme="dark"] {
-  --scribble-accent:      #CE5D97;
-  --scribble-accent-soft: color-mix(in oklch, #CE5D97 16%, #1C1B1A);
-  --scribble-active-soft: color-mix(in oklch, #CE5D97 28%, #1C1B1A);
-  --scribble-resolved:    #575653;
 }
 ::highlight(scribble-open) {
   background-color: var(--scribble-accent-soft);
@@ -67,8 +58,8 @@ const HOST_STYLES = `
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
-/* Make room for the sidebar. 20rem scales with the user's font-size. */
-body { padding-right: 20rem; }
+/* Make room for the sidebar so it doesn't overlap content. */
+body { padding-right: 320px; }
 `;
 
 function bootstrap() {
@@ -92,11 +83,7 @@ function bootstrap() {
   style.textContent = overlayCss as string;
   shadow.appendChild(style);
 
-  // Mount React. Theme attributes are set on the shadow host element so our
-  // overlay.css :host([data-scribble-theme=…]) selectors react to them.
-  initTheme(host);
-  initReader();
-
+  // Mount React
   const mount = document.createElement("div");
   shadow.appendChild(mount);
   createRoot(mount).render(

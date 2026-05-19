@@ -33,16 +33,11 @@ they ship.
 
 ## Visual / theme
 
-- [ ] **Drop the serif quote.** Use `system-ui` / `sans-serif` throughout.
+- [x] **Drop the serif quote.** Use `system-ui` / `sans-serif` throughout.
   Quotes don't need to be stylized — italic + thin left bar is enough.
-- [ ] **Respect the user's base font size.** Don't set body or chrome font-size
+- [x] **Respect the user's base font size.** Don't set body or chrome font-size
   to a fixed px; use `rem` everywhere and let the user's browser default
-  (usually 16px) take effect. Same for the host doc — we shouldn't force a size.
-- [ ] **Adopt [Flexoki](https://stephango.com/flexoki) as the theme.** Replace
-  the ad-hoc pink/oklch palette with Flexoki's named colors. Support
-  system/light/dark via `prefers-color-scheme` *and* an explicit override.
-  Pick a single Flexoki accent (probably `magenta` or `purple`) for highlights
-  and active states.
+  (usually 16px) take effect.
 
 ## Sidebar
 
@@ -93,3 +88,20 @@ These came up but we explicitly punted:
 - Authentication / multi-user — Scribble is local-first by design
 - Agent reply citation metadata (`Reply.contextRange`) — nice-to-have for
   agent reasoning audit; revisit after Flow C ships
+
+### Tried and rejected
+
+- **Flexoki palette for chrome.** Replaced our pink oklch accent with Flexoki
+  magenta + base scales. Felt clinical for a small annotation overlay; the
+  ad-hoc pink (`oklch(60% 0.33 340)`) reads better in the few square inches
+  of chrome we have. Reverted.
+- **Manual light/dark/auto theme toggle.** Built it as part of the Flexoki
+  pass. Adds chrome (a toggle button) for very little value vs.
+  `prefers-color-scheme` alone in a local-first tool. Reverted.
+- **Reader mode** (Flexoki, then Tufte CSS, then a scribble house style
+  modeled on a sample doc). Three attempts. The fundamental problem: as soon
+  as we start theming the host doc we're a reader app, not an annotation
+  tool. Scribble's value is being invisible to the doc — chrome on top, no
+  opinion about content. Reverted all three. **Principle**: scribble UI is
+  *never* affected by document display; document display is *never* affected
+  by scribble.
