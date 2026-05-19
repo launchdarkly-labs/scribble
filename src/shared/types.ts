@@ -61,7 +61,8 @@ export type Annotation = z.infer<typeof Annotation>;
 export type WsMessage =
   | { type: "snapshot"; annotations: Annotation[] }
   | { type: "upsert"; annotation: Annotation }
-  | { type: "remove"; id: string };
+  | { type: "remove"; id: string }
+  | { type: "doc-changed" };
 
 /** Helper to find a selector of a given type in an annotation. */
 export function findSelector<T extends Selector["type"]>(

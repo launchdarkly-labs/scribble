@@ -5,7 +5,8 @@
  * In dev (`bun run dev`), we build the overlay on demand via `Bun.build()`.
  * In a compiled binary, the built overlay will be embedded — wired up later.
  */
-import { resolve, isAbsolute } from "node:path";
+import { resolve, isAbsolute, dirname, basename } from "node:path";
+import { watch as fsWatch } from "node:fs";
 import { ulid } from "ulid";
 import { Annotation, type WsMessage } from "@/shared/types";
 import { z } from "zod";
@@ -120,6 +121,39 @@ export async function startDaemon(opts: DaemonOptions) {
     const payload = JSON.stringify(msg);
     for (const ws of wsClients) ws.send(payload);
   };
+
+  // Watch the source doc for edits.
+  //
+  // We watch the *parent directory* and filter by basename, rather than
+  // watching the file itself. This survives atomic-rename-on-save — the
+  // pattern used by vim, VS Code, `sed -i`, `node:fs.writeFile`, and most
+  // agent edit paths. fs.watch on the file follows the inode, which gets
+  // orphaned by a rename; fs.watch on the directory tracks the name.
+  //
+  // Editors fire several events per save; debounce 150ms to coalesce.
+  // On change, broadcast `doc-changed` — the browser reloads the page, the
+  // overlay's locate() then re-anchors against the fresh DOM. Anything
+  // locate() can't find becomes a (derived) orphan client-side. No
+  // server-side orphan state is persisted.
+  let docChangeTimer: ReturnType<typeof setTimeout> | null = null;
+  const docDir = dirname(docPath);
+  const docBase = basename(docPath);
+  const docWatcher = fsWatch(docDir, (_event, filename) => {
+    if (filename !== docBase) return;
+    if (docChangeTimer) clearTimeout(docChangeTimer);
+    docChangeTimer = setTimeout(() => {
+      broadcast({ type: "doc-changed" });
+    }, 150);
+  });
+
+  // Make sure we stop watching when the daemon exits.
+  const cleanupWatcher = () => {
+    if (docChangeTimer) clearTimeout(docChangeTimer);
+    try {
+      docWatcher.close();
+    } catch {}
+  };
+  process.on("exit", cleanupWatcher);
 
   const server = Bun.serve({
     port: opts.port,

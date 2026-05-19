@@ -10,7 +10,7 @@
 import { effect } from "@preact/signals-react";
 import type { Annotation } from "@/shared/types";
 import { locate } from "./anchoring";
-import { annotations, activeId, hoverId } from "./store";
+import { annotations, activeId, hoverId, orphanedIds } from "./store";
 
 const supported = typeof CSS !== "undefined" && "highlights" in CSS;
 
@@ -36,14 +36,24 @@ export function startHighlightSync() {
     resolved.clear();
     active.clear();
     hover.clear();
+    const orphans = new Set<string>();
     for (const a of list) {
       const r = locate(a.target.selector, document.body);
-      if (!r) continue;
+      if (!r) {
+        // Can't find the quoted text in the current DOM — derived orphan.
+        orphans.add(a.id);
+        continue;
+      }
       if (a.id === activeIdValue) active.add(r);
       else if (a.status === "open") open.add(r);
       else resolved.add(r);
       // Hover layers on top of any of the above
       if (a.id === hoverIdValue) hover.add(r);
+    }
+    // Only update if the set actually changed; effects shouldn't churn.
+    const prev = orphanedIds.value;
+    if (prev.size !== orphans.size || [...orphans].some((id) => !prev.has(id))) {
+      orphanedIds.value = orphans;
     }
   });
 }

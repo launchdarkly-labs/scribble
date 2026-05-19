@@ -14,6 +14,10 @@ export const activeId = signal<string | null>(null);
 export const hoverId = signal<string | null>(null);
 export const draftRange = signal<Range | null>(null);
 export const connected = signal(false);
+/** Set of annotation ids whose selector can no longer be located in the
+ * current DOM. Populated by the highlight-sync effect as a side-product of
+ * its locate() calls. "Orphan" is a derived view, never persisted. */
+export const orphanedIds = signal<Set<string>>(new Set());
 
 export const unresolved = computed(() =>
   annotations.value.filter((a) => a.status === "open"),
@@ -42,6 +46,17 @@ export function connect() {
   };
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data) as WsMessage;
+    if (msg.type === "doc-changed") {
+      // The source HTML was edited on disk. Reload so the overlay sees the
+      // fresh DOM; preserve the currently-open thread across the reload.
+      if (activeId.value) {
+        try {
+          sessionStorage.setItem("scribble:restore-active", activeId.value);
+        } catch {}
+      }
+      location.reload();
+      return;
+    }
     if (msg.type === "snapshot") {
       annotations.value = msg.annotations;
     } else if (msg.type === "upsert") {

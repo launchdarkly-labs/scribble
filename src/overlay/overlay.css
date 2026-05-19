@@ -150,6 +150,15 @@
 .item.resolved { opacity: 0.6; }
 .item.resolved:hover { opacity: 0.85; }
 
+.item.orphaned { opacity: 0.55; cursor: default; }
+.item.orphaned:hover { border-color: var(--rule); }
+.item.orphaned .item-quote { text-decoration: line-through; text-decoration-color: var(--muted); }
+
+.status-pill.orphaned {
+  background: color-mix(in oklch, #d97757 14%, transparent);
+  color: #b85a3c;
+}
+
 .item-head {
   display: flex;
   justify-content: space-between;

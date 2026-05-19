@@ -14,6 +14,7 @@ import { SelectionPill } from "./components/SelectionPill";
 import { DraftCard } from "./components/DraftCard";
 import { ThreadCard } from "./components/ThreadCard";
 import { connect, draftRange, activeId, hoverId, annotations } from "./store";
+import { effect } from "@preact/signals-react";
 import { startHighlightSync, annotationAt } from "./highlights";
 // Bun bundles overlay.css as a text string via the css→text loader.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -160,6 +161,26 @@ function bootstrap() {
 
   connect();
   startHighlightSync();
+
+  // After a doc-change reload, restore the previously-active thread once
+  // its annotation arrives in the snapshot. Runs once — the dispose cleans
+  // up the effect after a hit (or never, if the id is gone).
+  let restoreTargetId: string | null = null;
+  try {
+    restoreTargetId = sessionStorage.getItem("scribble:restore-active");
+    sessionStorage.removeItem("scribble:restore-active");
+  } catch {}
+  if (restoreTargetId) {
+    const dispose = effect(() => {
+      if (!restoreTargetId) return;
+      if (annotations.value.find((a) => a.id === restoreTargetId)) {
+        activeId.value = restoreTargetId;
+        restoreTargetId = null;
+        // Dispose on next microtask so we don't re-enter while computing.
+        queueMicrotask(() => dispose());
+      }
+    });
+  }
 }
 
 void bootstrap();
