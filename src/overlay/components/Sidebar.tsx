@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSignals } from "@preact/signals-react/runtime";
 import { annotations, activeId, connected, unresolved } from "../store";
+import { theme, cycleTheme } from "../theme";
 import type { Annotation } from "@/shared/types";
 
 export function Sidebar() {
@@ -15,9 +16,12 @@ export function Sidebar() {
     <aside className="sidebar">
       <header className="sidebar-header">
         <span className="sidebar-title">Scribble</span>
-        <span className="sidebar-status">
-          <span className={`dot ${connected.value ? "live" : ""}`} />
-          {unresolved.value.length} open
+        <span className="sidebar-actions">
+          <span className="sidebar-status">
+            <span className={`dot ${connected.value ? "live" : ""}`} />
+            {unresolved.value.length} open
+          </span>
+          <ThemeToggle />
         </span>
       </header>
       <div className="sidebar-list">
@@ -50,6 +54,24 @@ export function Sidebar() {
         )}
       </div>
     </aside>
+  );
+}
+
+function ThemeToggle() {
+  useSignals();
+  const t = theme.value;
+  const icon = t === "auto" ? "◐" : t === "light" ? "☀" : "☾";
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      onClick={cycleTheme}
+      title={`Theme: ${t} (click to cycle)`}
+      aria-label={`Theme: ${t}`}
+    >
+      <span className="icon" aria-hidden="true">{icon}</span>
+      <span>{t}</span>
+    </button>
   );
 }
 
