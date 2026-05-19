@@ -13,7 +13,7 @@ import { Sidebar } from "./components/Sidebar";
 import { SelectionPill } from "./components/SelectionPill";
 import { DraftCard } from "./components/DraftCard";
 import { ThreadCard } from "./components/ThreadCard";
-import { connect, draftRange, activeId, annotations } from "./store";
+import { connect, draftRange, activeId, hoverId, annotations } from "./store";
 import { startHighlightSync, annotationAt } from "./highlights";
 // Bun bundles overlay.css as a text string via the css→text loader.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -115,6 +115,31 @@ function bootstrap() {
       if (draftRange.value) draftRange.value = null;
       else if (activeId.value) activeId.value = null;
     }
+  });
+
+  // Hover over the host doc: light up the annotation under the cursor and
+  // switch to a pointer cursor for discoverability. Throttled to rAF so
+  // we hit-test at most once per frame regardless of mousemove rate.
+  let raf = 0;
+  let lastX = 0;
+  let lastY = 0;
+  document.addEventListener("mousemove", (e) => {
+    const target = e.target as Element | null;
+    if (target?.closest?.("#scribble-root")) return; // sidebar handles its own hover
+    lastX = e.clientX;
+    lastY = e.clientY;
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      const id = annotationAt(lastX, lastY, annotations.value);
+      if (hoverId.value !== id) hoverId.value = id;
+      document.body.style.cursor = id ? "pointer" : "";
+    });
+  });
+  // Drop hover when the cursor leaves the document entirely
+  document.addEventListener("mouseleave", () => {
+    if (hoverId.value !== null) hoverId.value = null;
+    document.body.style.cursor = "";
   });
 
   // Click in the host doc:
