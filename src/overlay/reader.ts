@@ -76,8 +76,7 @@ const READER_CSS = `
   --srb-bg:        #ffffff;
   --srb-ink:       #1a1a1a;
   --srb-muted:     #555555;
-  --srb-faint:     #dddddd;
-  --srb-rule:      #e5e5e5;
+  --srb-rule:      #dddddd;
   --srb-strong:    #000000;
   --srb-surface:   #f6f6f6;
   --srb-code-bg:   #f0f0f0;
@@ -90,7 +89,6 @@ const READER_CSS = `
       --srb-bg:        #161616;
       --srb-ink:       #e8e8e8;
       --srb-muted:     #9a9a9a;
-      --srb-faint:     #2a2a2a;
       --srb-rule:      #2a2a2a;
       --srb-strong:    #ffffff;
       --srb-surface:   #1f1f1f;
@@ -105,7 +103,6 @@ const READER_CSS = `
     --srb-bg:        #161616;
     --srb-ink:       #e8e8e8;
     --srb-muted:     #9a9a9a;
-    --srb-faint:     #2a2a2a;
     --srb-rule:      #2a2a2a;
     --srb-strong:    #ffffff;
     --srb-surface:   #1f1f1f;
@@ -129,68 +126,49 @@ const READER_CSS = `
   }
 
   /* ─── Body ─────────────────────────────────────────────── */
+  /* Match the source doc's measure (max-width 880px ≈ 55rem) and use
+     longhand padding-* so we don't clobber host scribble's reserved
+     padding-right: 20rem (sidebar room). */
   body {
     background: var(--srb-bg);
     color: var(--srb-ink);
-    font: 1rem/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 1rem/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
     margin: 0;
-    /* Left padding gives the content room; padding-right is left to host
-       scribble's "reserve 20rem for the sidebar" rule. */
-    padding: 3.5rem 0 5rem 0;
+    padding-top: 2rem;
+    padding-bottom: 5rem;
+    padding-left: 0;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Constrain block-level direct children to a comfortable measure,
+  /* Constrain block-level direct children to the same measure,
      centered in whatever space remains to the left of the sidebar. */
   body > * {
-    max-width: 50rem;
+    max-width: 55rem;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
   /* ─── Headings ─────────────────────────────────────────── */
-  h1, h2, h3, h4, h5, h6 {
-    line-height: 1.25;
-    font-weight: 600;
-    color: var(--srb-ink);
-    letter-spacing: -0.01em;
-  }
+  /* Sizes intentionally left at UA defaults (h1=2em, h2=1.5em, h3=1.17em
+     etc.) so the rhythm matches typical agent-generated HTML. We set
+     line-height and section-break decorations only. */
+  h1, h2, h3 { line-height: 1.2; color: var(--srb-ink); }
   h1 {
-    font-size: 1.875rem;
-    margin: 0 auto 1rem;
     padding-bottom: 0.4rem;
     border-bottom: 2px solid var(--srb-strong);
   }
   h2 {
-    font-size: 1.375rem;
-    margin: 2.25rem auto 0.6rem;
-    padding-bottom: 0.25rem;
+    margin-top: 2.2rem;
+    padding-bottom: 0.2rem;
     border-bottom: 1px solid var(--srb-rule);
   }
-  h3 {
-    font-size: 1.125rem;
-    margin: 1.5rem auto 0.5rem;
-  }
-  h4 {
-    font-size: 1rem;
-    margin: 1.25rem auto 0.4rem;
-  }
-  h5, h6 {
-    font-size: 0.875rem;
-    margin: 1rem auto 0.4rem;
-    color: var(--srb-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
+  h3 { margin-top: 1.4rem; }
+  h4, h5, h6 { color: var(--srb-ink); }
 
-  /* ─── Paragraphs / inline ──────────────────────────────── */
-  p { margin: 0 auto 0.85rem; }
-  /* Tighten the first paragraph after a heading. */
-  :is(h1, h2, h3, h4, h5, h6) + p { margin-top: 0; }
-
-  strong, b { font-weight: 600; color: var(--srb-strong); }
+  /* ─── Inline ───────────────────────────────────────────── */
+  strong, b { font-weight: 600; }
   em, i { font-style: italic; }
   small { font-size: 0.85em; color: var(--srb-muted); }
 
@@ -205,22 +183,19 @@ const READER_CSS = `
 
   /* ─── Code ─────────────────────────────────────────────── */
   code, pre, kbd, samp {
-    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    font-size: 0.875em;
+    font: 0.78125rem/1.5 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   }
   code {
     background: var(--srb-code-bg);
-    padding: 0.05em 0.35em;
+    padding: 1px 4px;
     border-radius: 3px;
     color: var(--srb-ink);
   }
   pre {
     background: var(--srb-surface);
-    padding: 0.85rem 1.05rem;
+    padding: 0.8rem 1rem;
     border-radius: 6px;
     overflow-x: auto;
-    margin: 0.9rem auto;
-    line-height: 1.55;
     color: var(--srb-ink);
   }
   pre code {
@@ -232,8 +207,7 @@ const READER_CSS = `
     background: var(--srb-surface);
     border: 1px solid var(--srb-rule);
     border-radius: 3px;
-    padding: 0.05em 0.35em;
-    font-size: 0.8em;
+    padding: 1px 4px;
   }
 
   /* ─── Blockquote ───────────────────────────────────────── */
@@ -246,12 +220,8 @@ const READER_CSS = `
   }
 
   /* ─── Lists ────────────────────────────────────────────── */
-  ul, ol {
-    margin: 0 auto 0.85rem;
-    padding-left: 1.5rem;
-  }
-  li { margin: 0.2rem 0; }
-  li > ul, li > ol { margin: 0.15rem 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin: 0.25rem 0; }
 
   /* ─── Rules ────────────────────────────────────────────── */
   hr {
@@ -266,19 +236,14 @@ const READER_CSS = `
     border-collapse: collapse;
     width: 100%;
     margin: 1rem auto;
-    font-size: 0.95rem;
   }
   th, td {
     text-align: left;
-    padding: 0.45rem 0.7rem;
+    padding: 0.4rem 0.6rem;
     border-bottom: 1px solid var(--srb-rule);
     vertical-align: top;
   }
-  th {
-    background: var(--srb-surface);
-    color: var(--srb-strong);
-    font-weight: 600;
-  }
+  th { background: var(--srb-surface); }
 
   /* ─── Media ────────────────────────────────────────────── */
   img, svg, video {
