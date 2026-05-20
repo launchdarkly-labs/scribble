@@ -16,7 +16,19 @@ export function Sidebar() {
   const [orphansExpanded, setOrphansExpanded] = useState(true);
 
   return (
-    <aside className="sidebar">
+    <aside
+      className="sidebar"
+      onClick={(e) => {
+        // Clicking sidebar chrome (background, header, empty space) deselects
+        // the active thread, mirroring the host-doc background-click behavior.
+        // Items and buttons handle their own clicks; we only act when the
+        // click didn't land on an interactive descendant.
+        const t = e.target as Element | null;
+        if (!t?.closest?.(".item, button")) {
+          if (activeId.value) activeId.value = null;
+        }
+      }}
+    >
       <header className="sidebar-header">
         <span className="sidebar-title">Scribble</span>
         <span className="sidebar-status">
