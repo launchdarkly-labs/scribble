@@ -38,6 +38,25 @@ scribble open --detach ./report.html
 5. repeat until empty, then summarize in chat
 ```
 
+## Treat a review as a batch, not a stream
+
+Scribble doesn't notify you when the user adds a comment — they push,
+you pull. When the user says **"take a look," "review my comments,"
+"address what I left,"** or similar, treat that as the boundary of a
+review submission:
+
+1. Run `scribble list --unresolved --json` once at the top of the turn.
+2. Read every open annotation as a coherent set, not one at a time.
+3. Group related annotations and address them together where it makes
+   sense (e.g. three comments all questioning the same approach — one
+   reply explaining the rationale beats three separate ones).
+4. Use `scribble resolve apply --stdin` to commit the whole batch in one
+   shot when you have several replies ready.
+5. Summarize in chat *after* the batch is applied.
+
+Do **not** poll `scribble list` between user messages without being asked.
+The user's chat message is the "submit review" boundary; respect it.
+
 **Session selection.** Commands auto-resolve the session in this order:
 
 1. If `--doc <path>` is passed, the session whose docPath matches is used.

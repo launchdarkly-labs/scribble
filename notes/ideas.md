@@ -83,6 +83,26 @@ they ship.
   selectors on every effect tick, so re-introducing the quoted text
   un-orphans automatically.
 
+## Reviews as first-class artifacts
+
+- [ ] **`scribble review submit`.** Adds an explicit review-submit primitive,
+  GitHub PR style. CLI: `scribble review submit --verdict <approve|request-changes|comment> --message "..."`. Appends a `{type:"review", id, verdict, message, annotations: [<open ids at submit time>], author, submitted}` record to the JSONL and broadcasts it over WS. Doesn't change annotation state — comments are always live; this just creates the *artifact* of "Alice reviewed at this point with this verdict and overall take."
+
+  Browser side: a "Submit review" button at the top of the sidebar that
+  opens a small form (textarea + 3-button verdict picker), bundles all
+  currently-open annotations into the new review record.
+
+  Why later, not now: for solo use the user's chat message to the agent
+  does the same job. Earns its keep when `.scribble/` is git-tracked and
+  the team wants "Alice approved spec v3 with these caveats" as a real
+  record, not just a chat artifact. Trigger to revisit: when the team
+  workflow actually starts using `.scribble/` in PRs.
+
+  Explicitly *not* doing alongside it: "pending" annotations (draft state
+  visible only to author until submit). Adds real complexity to every
+  read path; the local-first model means there's no other reader to hide
+  from anyway.
+
 ## Agent UX
 
 - [x] **`scribble open --detach`.** Spawns the daemon as a detached child,
