@@ -14,8 +14,9 @@ import { SelectionPill } from "./components/SelectionPill";
 import { DraftCard } from "./components/DraftCard";
 import { ThreadCard } from "./components/ThreadCard";
 import { connect, draftRange, activeId, hoverId, annotations } from "./store";
-import { effect } from "@preact/signals-react";
 import { startHighlightSync, annotationAt } from "./highlights";
+import { startHashSync } from "./hash-sync";
+import { startDialogCoordinator } from "./dialog-coordinator";
 // Bun bundles overlay.css as a text string via the css→text loader.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error - text import
@@ -24,17 +25,27 @@ import overlayCss from "./overlay.css";
 // CSS for the Highlight API ranges — must live in the host document because
 // ::highlight() applies to the host's text nodes, not the shadow root's.
 const HOST_STYLES = `
+html {
+  /* Scroll smoothly when ThreadCard calls scrollIntoView on the annotated
+     element. CSS-side as well as JS-side is belt-and-suspenders; CSS
+     also automatically honors prefers-reduced-motion, which the JS-passed
+     behavior: smooth option does not reliably do across browsers. */
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
 :root {
-  --scribble-accent: oklch(60% 0.33 340);
-  --scribble-accent-soft: oklch(96% 0.012 340);
-  --scribble-active-soft: oklch(92% 0.04 340);
+  --scribble-accent: oklch(52% 0.32 264.84);
+  --scribble-accent-soft: oklch(96% 0.025 264.84);
+  --scribble-active-soft: oklch(92% 0.06 264.84);
   --scribble-resolved: oklch(70% 0.005 280);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --scribble-accent: oklch(72% 0.18 340);
-    --scribble-accent-soft: oklch(26% 0.04 340);
-    --scribble-active-soft: oklch(34% 0.08 340);
+    --scribble-accent: oklch(72% 0.20 264.84);
+    --scribble-accent-soft: oklch(28% 0.06 264.84);
+    --scribble-active-soft: oklch(36% 0.10 264.84);
     --scribble-resolved: oklch(45% 0.005 280);
   }
 }
@@ -61,6 +72,13 @@ const HOST_STYLES = `
 }
 ::highlight(scribble-hover) {
   background-color: var(--scribble-active-soft);
+}
+::highlight(scribble-draft) {
+  background-color: var(--scribble-active-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--scribble-accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 /* Make room for the sidebar so it doesn't overlap content. */
 body { padding-right: 320px; }
@@ -159,28 +177,19 @@ function bootstrap() {
     if (activeId.value) activeId.value = null;
   });
 
+  // Order matters here:
+  //   1. startHashSync() seeds activeId from any incoming #ann_… hash so
+  //      the coordinator's activation effect sees it on first run.
+  //   2. startDialogCoordinator() registers the IntersectionObserver and
+  //      effects. With an empty annotations list it'll stash a pending
+  //      activation id (if any) until the WS snapshot arrives.
+  //   3. connect() opens the WebSocket; the snapshot triggers the
+  //      sync effect, which resolves any pending activation.
+  //   4. startHighlightSync() draws CSS Highlights for those annotations.
+  startHashSync();
+  startDialogCoordinator();
   connect();
   startHighlightSync();
-
-  // After a doc-change reload, restore the previously-active thread once
-  // its annotation arrives in the snapshot. Runs once — the dispose cleans
-  // up the effect after a hit (or never, if the id is gone).
-  let restoreTargetId: string | null = null;
-  try {
-    restoreTargetId = sessionStorage.getItem("scribble:restore-active");
-    sessionStorage.removeItem("scribble:restore-active");
-  } catch {}
-  if (restoreTargetId) {
-    const dispose = effect(() => {
-      if (!restoreTargetId) return;
-      if (annotations.value.find((a) => a.id === restoreTargetId)) {
-        activeId.value = restoreTargetId;
-        restoreTargetId = null;
-        // Dispose on next microtask so we don't re-enter while computing.
-        queueMicrotask(() => dispose());
-      }
-    });
-  }
 }
 
 void bootstrap();

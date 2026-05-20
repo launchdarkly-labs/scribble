@@ -11,6 +11,8 @@ import { get } from "./commands/get";
 import { resolve as resolveCmd } from "./commands/resolve";
 import { session } from "./commands/session";
 import { comment } from "./commands/comment";
+import { skill } from "./commands/skill";
+import { watch } from "./commands/watch";
 
 const argv = process.argv.slice(2);
 const [cmd, ...rest] = argv;
@@ -29,6 +31,10 @@ async function main() {
       return comment(rest);
     case "session":
       return session(rest);
+    case "skill":
+      return skill(rest);
+    case "watch":
+      return watch(rest);
     case "--version":
     case "-v":
       console.log("scribble 0.0.1");
@@ -52,7 +58,7 @@ USAGE
   scribble <command> [options]
 
 START A SESSION
-  open <file.html>              Start the daemon for this doc and open a browser
+  open <file.html|md>           Start the daemon for this doc and open a browser
     --detach                    Run the daemon in the background; print {id, url, ...}
     --no-open                   Don't auto-launch a browser tab
     --port=N                    Listen on port N (default: 7878, then walks up)
@@ -64,9 +70,15 @@ READ / WRITE
   resolve apply --stdin                        Batch from JSON stdin (see SKILL.md)
   comment add --quote "..." --summary "..."    Pin an agent question to a span
     --prefix "..." --suffix "..."              Disambiguate when the quote isn't unique
+  watch [--unresolved] [--once] [--until-empty] [--idle <dur>]
+                                               Stream annotation events as NDJSON
 
 SESSIONS
   session list [--json]         List active daemon sessions
+
+AGENTS
+  skill                         Print the agent-facing skill to stdout
+    --path                      Print the skill file's absolute path instead
 
 GLOBAL
   --doc <path>                  Select session by document path
@@ -75,8 +87,8 @@ GLOBAL
   -h, --help                    Show help
   -v, --version                 Show version
 
-AGENTS
-  Skill file at src/skill/SKILL.md (in this repo) teaches the workflow.
+WORKING WITH AGENTS
+  See WORKING_WITH_AGENTS.md. Quickest path: 'scribble skill | pbcopy'.
 `);
 }
 

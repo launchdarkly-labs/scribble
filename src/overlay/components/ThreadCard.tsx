@@ -7,6 +7,7 @@ import {
   resolveAnnotation,
   reopenAnnotation,
   deleteAnnotation,
+  showThreadForId,
 } from "../store";
 import { locate } from "../anchoring";
 import type { Annotation, Author } from "@/shared/types";
@@ -24,6 +25,11 @@ const GAP = 16;
 export function ThreadCard() {
   useSignals();
   const ann = activeAnnotation.value;
+  // The dialog coordinator owns *when* the card may appear: only after the
+  // annotation's target has reached the viewport's center band. Until then,
+  // we keep `pos` null and render nothing — so the card never visibly
+  // travels with the smooth scroll.
+  const showCard = showThreadForId.value === ann?.id;
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -34,25 +40,19 @@ export function ThreadCard() {
     setReply("");
   }, [ann?.id]);
 
-  // Scroll the annotated text into view when this card opens
+  // Track the annotated range's position so the card follows on scroll/resize.
+  // Gated on `showCard` so it doesn't run — and the card stays unrendered —
+  // until the coordinator centers the activation. The scrollIntoView call
+  // that brings the target into view lives in the coordinator, not here.
+  //
+  // rAF-throttled: scroll events fire once per frame, and an unthrottled
+  // handler doing locate() + setPos() per event can stall the main thread.
   useEffect(() => {
-    if (!ann) return;
-    const range = locate(ann.target.selector, document.body);
-    if (!range) return;
-    const target =
-      range.startContainer.nodeType === Node.TEXT_NODE
-        ? (range.startContainer as Text).parentElement
-        : (range.startContainer as Element);
-    target?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [ann?.id]);
-
-  // Track the annotated range's position so the card follows on scroll/resize
-  useEffect(() => {
-    if (!ann) {
+    if (!ann || !showCard) {
       setPos(null);
       return;
     }
-    const update = () => {
+    const compute = () => {
       const range = locate(ann.target.selector, document.body);
       if (!range) {
         setPos(null);
@@ -68,14 +68,23 @@ export function ThreadCard() {
       const left = Math.min(Math.max(8, r.left), Math.max(8, maxLeft));
       setPos({ top, left });
     };
-    update();
+    let raf: number | null = null;
+    const update = () => {
+      if (raf != null) return;
+      raf = requestAnimationFrame(() => {
+        raf = null;
+        compute();
+      });
+    };
+    compute(); // first paint: synchronous so the card appears in place
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
     return () => {
+      if (raf != null) cancelAnimationFrame(raf);
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [ann?.id]);
+  }, [ann?.id, showCard]);
 
   if (!ann || !pos) return null;
 

@@ -5,7 +5,7 @@
  * In dev (`bun run dev`), we build the overlay on demand via `Bun.build()`.
  * In a compiled binary, the built overlay will be embedded — wired up later.
  */
-import { resolve, isAbsolute, dirname, basename } from "node:path";
+import { resolve, isAbsolute, dirname, basename, join } from "node:path";
 import { watch as fsWatch } from "node:fs";
 import { ulid } from "ulid";
 import { Annotation, Author, type WsMessage } from "@/shared/types";
@@ -13,6 +13,8 @@ import { z } from "zod";
 import * as store from "./store";
 import { findInDoc } from "./anchoring";
 import { resolveHumanAuthor } from "./identity";
+import { renderMarkdown, isMarkdownPath, extractTitle } from "./markdown";
+import { buildMarkdownShell } from "./markdown-shell";
 
 const CreateBody = Annotation.omit({
   id: true,
@@ -81,16 +83,26 @@ export async function startDaemon(opts: DaemonOptions) {
   // once at startup; the overlay reads it from an injected <meta> tag.
   const humanAuthor = resolveHumanAuthor(docPath);
 
-  // The overlay is rebuilt on every doc reload in dev so source edits show
-  // up without restarting the daemon. The build typically takes <100ms and
-  // its result is reused for asset requests until the next doc reload.
-  type Overlay = {
-    assets: Map<string, { content: ArrayBuffer; type: string }>;
-    entry: string;
+  // Two browser-facing bundles: the overlay (React, runs in the closed
+  // shadow root) and the markdown runtime (vanilla, runs on the host page).
+  // Each bundle owns a URL namespace under /_scribble/assets/<ns>/...,
+  // which makes collisions across bundles structurally impossible — their
+  // output basenames don't have to be globally unique because they live in
+  // disjoint URL spaces. Rebuilt on every doc reload in dev.
+  type Bundle = {
+    /** URL path → served content (e.g. "/_scribble/assets/overlay/main.js"). */
+    files: Map<string, { content: ArrayBuffer; type: string }>;
+    /** Full URL of the entry-point script. */
+    entryUrl: string;
   };
-  async function buildOverlay(): Promise<Overlay> {
+  type Bundles = { overlay: Bundle; mdRuntime: Bundle };
+
+  async function buildOneBundle(
+    srcRelative: string,
+    namespace: string,
+  ): Promise<Bundle> {
     const result = await Bun.build({
-      entrypoints: [new URL("../overlay/main.tsx", import.meta.url).pathname],
+      entrypoints: [new URL(srcRelative, import.meta.url).pathname],
       target: "browser",
       format: "esm",
       minify: false,
@@ -99,26 +111,34 @@ export async function startDaemon(opts: DaemonOptions) {
     });
     if (!result.success) {
       for (const log of result.logs) console.error(log);
-      throw new Error("Overlay build failed");
+      throw new Error(`Bundle build failed: ${namespace}`);
     }
-    const assets = new Map<string, { content: ArrayBuffer; type: string }>();
+    const files = new Map<string, { content: ArrayBuffer; type: string }>();
+    let entryUrl = "";
     for (const out of result.outputs) {
-      const name = out.path.replace(/^.*[\\/]/, "");
-      assets.set(name, {
-        content: await out.arrayBuffer(),
-        type:
-          out.kind === "entry-point" || out.kind === "chunk"
-            ? "application/javascript; charset=utf-8"
-            : "text/css; charset=utf-8",
-      });
+      const basename = out.path.replace(/^.*[\\/]/, "");
+      const url = `/_scribble/assets/${namespace}/${basename}`;
+      const type =
+        out.kind === "entry-point" || out.kind === "chunk"
+          ? "application/javascript; charset=utf-8"
+          : out.path.endsWith(".css")
+            ? "text/css; charset=utf-8"
+            : "application/octet-stream";
+      files.set(url, { content: await out.arrayBuffer(), type });
+      if (out.kind === "entry-point") entryUrl = url;
     }
-    const entry =
-      result.outputs.find((o) => o.kind === "entry-point")?.path.replace(/^.*[\\/]/, "") ??
-      "main.js";
-    return { assets, entry };
+    return { files, entryUrl };
   }
 
-  let overlay: Overlay = await buildOverlay();
+  async function buildBundles(): Promise<Bundles> {
+    const [overlay, mdRuntime] = await Promise.all([
+      buildOneBundle("../overlay/main.tsx", "overlay"),
+      buildOneBundle("../markdown-runtime/runtime.ts", "runtime"),
+    ]);
+    return { overlay, mdRuntime };
+  }
+
+  let bundles: Bundles = await buildBundles();
 
   // WebSocket clients
   const wsClients = new Set<Bun.ServerWebSocket<unknown>>();
@@ -171,10 +191,13 @@ export async function startDaemon(opts: DaemonOptions) {
         return new Response("Upgrade failed", { status: 400 });
       }
 
-      // Overlay assets
+      // Browser bundles. Each bundle owns a namespace under /_scribble/assets/;
+      // disjoint namespaces mean a lookup in one bundle can never resolve into
+      // another's outputs.
       if (url.pathname.startsWith("/_scribble/assets/")) {
-        const name = url.pathname.replace("/_scribble/assets/", "");
-        const asset = overlay.assets.get(name);
+        const asset =
+          bundles.overlay.files.get(url.pathname) ??
+          bundles.mdRuntime.files.get(url.pathname);
         if (!asset) return new Response("Not found", { status: 404 });
         return new Response(asset.content, {
           headers: {
@@ -182,6 +205,14 @@ export async function startDaemon(opts: DaemonOptions) {
             "Cache-Control": "no-store",
           },
         });
+      }
+
+      // Markdown vendor assets: highlight.js theme + katex CSS/fonts.
+      // Served straight out of node_modules; not bundled because (a) the
+      // katex CSS references font files by relative URL and we want them
+      // to resolve cleanly, and (b) it keeps the overlay bundle small.
+      if (url.pathname.startsWith("/_scribble/md/")) {
+        return serveMarkdownAsset(url.pathname.replace("/_scribble/md/", ""));
       }
 
       // JSON API
@@ -194,14 +225,28 @@ export async function startDaemon(opts: DaemonOptions) {
       // error we keep serving the previous successful build.
       if (url.pathname === "/" || url.pathname === "/index.html") {
         try {
-          overlay = await buildOverlay();
+          bundles = await buildBundles();
         } catch (err) {
           console.error(
-            `[scribble] overlay rebuild failed, serving previous: ${(err as Error).message}`,
+            `[scribble] bundle rebuild failed, serving previous: ${(err as Error).message}`,
           );
         }
         const original = await Bun.file(docPath).text();
-        const injected = injectOverlay(original, overlay.entry, humanAuthor);
+        let html: string;
+        if (isMarkdownPath(docPath)) {
+          const rendered = renderMarkdown(original);
+          html = buildMarkdownShell({
+            title: extractTitle(original, basename(docPath)),
+            rendered,
+            // Only inject the runtime <script> if there are diagrams to
+            // render. The bundle itself is always built; this just avoids
+            // having the browser fetch+parse it when it would do nothing.
+            mdRuntimeEntryUrl: rendered.hasMermaid ? bundles.mdRuntime.entryUrl : null,
+          });
+        } else {
+          html = original;
+        }
+        const injected = injectOverlay(html, bundles.overlay.entryUrl, humanAuthor);
         return new Response(injected, {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
@@ -241,8 +286,8 @@ async function handleApi(
   // ── Create-by-quote (agent-initiated, Flow C) ──
   if (req.method === "POST" && url.pathname === "/_scribble/api/annotations/by-quote") {
     const body = ByQuoteBody.parse(await req.json());
-    const html = await Bun.file(docPath).text();
-    const found = findInDoc(html, body.quote, body.prefix, body.suffix);
+    const source = await Bun.file(docPath).text();
+    const found = findInDoc(source, body.quote, body.prefix, body.suffix, docPath);
     if (!found.ok) return new Response(found.error, { status: 400 });
     const now = new Date().toISOString();
     const ann: Annotation = {
@@ -359,7 +404,46 @@ async function handleApi(
   return new Response("Method not allowed", { status: 405 });
 }
 
-function injectOverlay(html: string, entryName: string, humanAuthor: Author): string {
+/**
+ * Serve highlight.js + katex assets out of node_modules. We use a fixed,
+ * sandboxed prefix and an allowlist of resolvable subpaths to avoid any
+ * path-traversal risk (`..` segments are rejected by `join` + the prefix
+ * check below).
+ */
+async function serveMarkdownAsset(subpath: string): Promise<Response> {
+  // Allowlist: hljs theme, katex CSS, katex fonts.
+  let fsPath: string | null = null;
+  if (subpath === "hljs.css") {
+    fsPath = require.resolve("highlight.js/styles/github.min.css");
+  } else if (subpath === "hljs-dark.css") {
+    fsPath = require.resolve("highlight.js/styles/github-dark.min.css");
+  } else if (subpath === "katex/katex.min.css") {
+    fsPath = require.resolve("katex/dist/katex.min.css");
+  } else if (subpath.startsWith("katex/fonts/")) {
+    const fontFile = subpath.replace("katex/fonts/", "");
+    if (/^KaTeX_[A-Za-z0-9_-]+\.(woff2?|ttf)$/.test(fontFile)) {
+      const katexCss = require.resolve("katex/dist/katex.min.css");
+      fsPath = join(dirname(katexCss), "fonts", fontFile);
+    }
+  }
+  if (!fsPath) return new Response("Not found", { status: 404 });
+  const file = Bun.file(fsPath);
+  if (!(await file.exists())) return new Response("Not found", { status: 404 });
+  const type = fsPath.endsWith(".css")
+    ? "text/css; charset=utf-8"
+    : fsPath.endsWith(".woff2")
+      ? "font/woff2"
+      : fsPath.endsWith(".woff")
+        ? "font/woff"
+        : fsPath.endsWith(".ttf")
+          ? "font/ttf"
+          : "application/octet-stream";
+  return new Response(file, {
+    headers: { "Content-Type": type, "Cache-Control": "public, max-age=3600" },
+  });
+}
+
+function injectOverlay(html: string, entryUrl: string, humanAuthor: Author): string {
   const safeAuthor = JSON.stringify(humanAuthor)
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
@@ -368,7 +452,7 @@ function injectOverlay(html: string, entryName: string, humanAuthor: Author): st
   const snippet = `
 <!-- scribble overlay -->
 <div id="scribble-root"></div>
-<script type="module" src="/_scribble/assets/${entryName}"></script>
+<script type="module" src="${entryUrl}"></script>
 `;
   let out = html;
   if (out.includes("</head>")) {

@@ -22,16 +22,27 @@ bun run typecheck                # tsc --noEmit, should be clean
 bun src/cli.ts open <some.html>  # opens http://localhost:7878 in a browser
 ```
 
-Source edits to `src/overlay/*` and `src/daemon/server.ts` rebuild on the next browser refresh (the daemon rebuilds the overlay bundle per `GET /`). No daemon restart needed.
+If you've run `bun link` in this repo, the global `scribble` binary is a symlink chain back to `./src/cli.ts`. Bun executes TypeScript directly, so there's no rebuild step — but *which* edits show up where depends on the layer:
 
-Source edits to the **CLI subcommands** (`src/commands/*`, `src/cli.ts`) take effect on the next `scribble ...` invocation — they run in fresh processes.
+| You changed                                           | Picked up by                                | Why                                                                                              |
+| ----------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `src/cli.ts`, `src/commands/*`                        | next `scribble …` invocation                | each CLI call spawns a fresh `bun src/cli.ts` process                                            |
+| `src/skill/SKILL.md`                                  | next `scribble skill` invocation            | read from disk on demand                                                                         |
+| `src/overlay/*`, `src/markdown-runtime/*`             | **browser refresh**                         | daemon re-runs `Bun.build()` per `GET /`, reading these sources fresh from disk                  |
+| `src/daemon/*` (server, markdown renderer, anchoring) | **daemon restart** (ctrl-c, rerun `open`)   | already imported into the running daemon; new code can't replace it without a process restart    |
+| `src/shared/types.ts`                                 | browser refresh **and** daemon restart      | used by both halves                                                                              |
+| `package.json` deps                                   | daemon restart                              | `node_modules` is read at startup                                                                |
+
+For a tighter daemon-edit loop, `bun run dev -- open <some.html>` runs the CLI under `bun --hot`, which reloads daemon code on save. CLI subcommands and overlay code still follow the rules above; the difference is only that daemon edits no longer require a manual restart.
 
 ## Hard architectural rules
 
 The two principles that organize most of the design:
 
 1. **Scribble UI is *never* affected by document display.** Chrome lives in a closed shadow DOM. The host doc's CSS cannot reach in.
-2. **Document display is *never* affected by scribble.** We touch the host page in exactly two ways: (a) inject `<div id="scribble-root"></div><script>` near `</body>`, (b) inject a `<style>` that defines `::highlight()` rules and `body { padding-right: 20rem }`. That's it. No reader mode, no theme application to doc, no font overrides.
+2. **Document display is *never* affected by scribble** — *when the source has presentation*. For HTML inputs, we touch the host page in exactly two ways: (a) inject `<div id="scribble-root"></div><script>` near `</body>`, (b) inject a `<style>` that defines `::highlight()` rules and `body { padding-right: 20rem }`. That's it. No reader mode, no theme application to doc, no font overrides.
+
+   **Markdown carve-out.** Raw `.md` has no presentation — staring at `# heading` source defeats the point of an annotation tool. For markdown specifically, scribble *is* the renderer (see `src/daemon/markdown.ts`). This is not a license to theme HTML: if a file already has presentation, hands off. `.mdx` and other templated formats count as "has presentation" — point users at the build output instead.
 
 These rules survived three reverted reader-mode attempts. Don't reintroduce them — every theming-the-host-doc experiment turned scribble into a reader app, not an annotation tool.
 
@@ -116,7 +127,7 @@ The store has been bitten before (`store.append` race fixed via `O_APPEND`). Add
 - **Async**: prefer `await` over chained `.then()`. The daemon and CLI are not perf-sensitive — clarity wins.
 - **Anchoring math** is shared in spirit but not in code: `src/daemon/anchoring.ts` and `src/overlay/anchoring.ts` are independent because one runs on raw HTML and the other on a live DOM. Keep them in sync conceptually (whitespace-flexible fallback, prefix/suffix disambiguation).
 - **Styling**: chrome styles in `src/overlay/overlay.css` (shadow-scoped); the `::highlight()` rules and `body { padding-right }` in `HOST_STYLES` in `main.tsx`. **Nothing else** touches the host doc's styling.
-- **Pink accent**: `oklch(60% 0.33 340)`. Don't bikeshed; the three theme-system attempts in the rejected pile took longer than the rest of v0 combined.
+- **Accent color**: `oklch(52% 0.32 264.84)` (deep blue). Light/dark variants are derived in `src/overlay/main.tsx` (HOST_STYLES) and `src/overlay/overlay.css` (`:host`). Don't bikeshed the palette — the three theme-system attempts in the rejected pile took longer than the rest of v0 combined.
 
 ## Known sharp edges
 

@@ -1,14 +1,19 @@
 /**
- * Server-side anchoring: take a raw HTML document and an agent-supplied
- * quote, locate the quote in the document, and return TextQuoteSelector
- * fields (exact text + prefix/suffix snippets) ready to persist.
+ * Server-side anchoring: take a raw document (HTML or markdown source) and
+ * an agent-supplied quote, locate the quote in the document, and return
+ * TextQuoteSelector fields (exact text + prefix/suffix snippets) ready to
+ * persist.
  *
- * We approximate the browser's rendered text by stripping <script>/<style>
- * blocks, HTML comments, and tags, then decoding the most common entities.
- * The result is good enough for agent-supplied quotes to find their target
- * in typical HTML; the overlay's `locate()` does its own whitespace-flexible
- * matching as a fallback if the stored selector and the live DOM disagree.
+ * For HTML inputs we approximate the browser's rendered text by stripping
+ * <script>/<style> blocks, HTML comments, and tags, then decoding the most
+ * common entities. For markdown inputs we first render via the same
+ * pipeline the daemon uses to serve the doc, then run the same extractor.
+ * Both paths converge on a plain-text approximation of what the user sees.
+ *
+ * The overlay's `locate()` does its own whitespace-flexible matching as a
+ * fallback if the stored selector and the live DOM disagree.
  */
+import { renderMarkdown, isMarkdownPath } from "./markdown";
 
 const CONTEXT_LEN = 32;
 
@@ -41,11 +46,15 @@ export type LocateResult =
  * `hintPrefix` and/or `hintSuffix` for disambiguation.
  */
 export function findInDoc(
-  html: string,
+  source: string,
   quote: string,
   hintPrefix?: string,
   hintSuffix?: string,
+  /** Optional path hint so we can route markdown through the renderer. */
+  sourcePath?: string,
 ): LocateResult {
+  const html =
+    sourcePath && isMarkdownPath(sourcePath) ? renderMarkdown(source).body : source;
   const text = extractText(html);
   if (!quote) return { ok: false, error: "Empty quote" };
 

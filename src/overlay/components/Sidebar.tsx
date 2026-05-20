@@ -113,7 +113,12 @@ function Item({ ann, orphaned }: { ann: Annotation; orphaned?: boolean }) {
           {orphaned ? "not found" : ann.status}
         </span>
       </div>
-      {exact ? <div className="item-quote">{exact}</div> : null}
+      {/* Only show the quote for orphans. For located annotations the
+          CSS Highlight in the document is a better representation —
+          hovering/clicking lights it up in context. Orphans have no
+          highlight (locate() failed), so the quote is the only handle
+          left to identify what the annotation was about. */}
+      {orphaned && exact ? <div className="item-quote">{exact}</div> : null}
       <div className="item-body">{ann.body.value}</div>
       {ann.replies.length > 0 ? (
         <div className="item-reply-count">

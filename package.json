@@ -15,6 +15,13 @@
     "@base-ui-components/react": "^1.0.0-beta.0",
     "@preact/signals-react": "^3.0.0",
     "cmdk": "^1.1.1",
+    "highlight.js": "^11.11.1",
+    "katex": "^0.16.47",
+    "marked": "^18.0.4",
+    "marked-gfm-heading-id": "^4.1.4",
+    "marked-highlight": "^2.2.4",
+    "marked-katex-extension": "^5.1.8",
+    "mermaid": "^11.15.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hotkeys-hook": "^4.6.0",
@@ -23,6 +30,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.2.0",
+    "@types/katex": "^0.16.8",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "^5.6.0"

@@ -10,7 +10,7 @@
 import { effect } from "@preact/signals-react";
 import type { Annotation } from "@/shared/types";
 import { locate } from "./anchoring";
-import { annotations, activeId, hoverId, orphanedIds } from "./store";
+import { annotations, activeId, hoverId, orphanedIds, draftRange } from "./store";
 
 const supported = typeof CSS !== "undefined" && "highlights" in CSS;
 
@@ -23,10 +23,21 @@ export function startHighlightSync() {
   const resolved = new Highlight();
   const active = new Highlight();
   const hover = new Highlight();
+  // Draft = the user has a pending new-comment dialog open and we want to
+  // keep their selection visible while they type. Driven separately from
+  // the annotation list because there's no Annotation yet.
+  const draft = new Highlight();
   CSS.highlights.set("scribble-open", open);
   CSS.highlights.set("scribble-resolved", resolved);
   CSS.highlights.set("scribble-active", active);
   CSS.highlights.set("scribble-hover", hover);
+  CSS.highlights.set("scribble-draft", draft);
+
+  effect(() => {
+    const r = draftRange.value;
+    draft.clear();
+    if (r) draft.add(r);
+  });
 
   effect(() => {
     const list = annotations.value;

@@ -5,7 +5,7 @@ import { listSessions, registerSession, unregisterSession } from "./_session-reg
 
 export async function open(args: string[]) {
   const file = args.find((a) => !a.startsWith("--"));
-  if (!file) throw new Error("Usage: scribble open <file.html> [--detach] [--no-open] [--port=N]");
+  if (!file) throw new Error("Usage: scribble open <file.html|file.md> [--detach] [--no-open] [--port=N]");
   if (args.includes("--detach")) return openDetached(args);
   const noOpen = args.includes("--no-open");
   const portFlag = args.find((a) => a.startsWith("--port="));

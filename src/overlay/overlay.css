@@ -3,11 +3,11 @@
    (except via the host-side <style> injected from main.tsx for ::highlight). */
 
 :host {
-  /* Pink/magenta accent — calmer than the orange we had */
-  --accent: oklch(60% 0.33 340);
-  --accent-mid: oklch(72% 0.18 340);
-  --accent-soft: oklch(96% 0.012 340);
-  --accent-line: oklch(60% 0.33 340 / 0.5);
+  /* Deep blue accent */
+  --accent: oklch(52% 0.32 264.84);
+  --accent-mid: oklch(72% 0.18 264.84);
+  --accent-soft: oklch(96% 0.025 264.84);
+  --accent-line: oklch(52% 0.32 264.84 / 0.5);
 
   --ink: oklch(22% 0.005 280);
   --muted: oklch(50% 0.01 280);
@@ -27,10 +27,10 @@
 
 @media (prefers-color-scheme: dark) {
   :host {
-    --accent: oklch(72% 0.18 340);
-    --accent-mid: oklch(78% 0.16 340);
-    --accent-soft: oklch(26% 0.04 340);
-    --accent-line: oklch(72% 0.18 340 / 0.5);
+    --accent: oklch(72% 0.20 264.84);
+    --accent-mid: oklch(78% 0.16 264.84);
+    --accent-soft: oklch(28% 0.06 264.84);
+    --accent-line: oklch(72% 0.20 264.84 / 0.5);
 
     --ink: oklch(92% 0.005 280);
     --muted: oklch(65% 0.01 280);
@@ -152,7 +152,6 @@
 
 .item.orphaned { opacity: 0.55; cursor: default; }
 .item.orphaned:hover { border-color: var(--rule); }
-.item.orphaned .item-quote { text-decoration: line-through; text-decoration-color: var(--muted); }
 
 .status-pill.orphaned {
   background: color-mix(in oklch, #d97757 14%, transparent);
@@ -169,15 +168,17 @@
 }
 .item-head .author { display: inline-flex; align-items: center; gap: 4px; }
 
+/* Only rendered for orphans (see Sidebar.tsx). Utilitarian styling —
+   this is here because the in-document highlight is missing, not as a
+   pull-quote flourish. Line-through reinforces "text we couldn't find". */
 .item-quote {
-  font-family: var(--font-serif);
-  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
   color: var(--muted);
-  border-left: 2px solid var(--accent-line);
-  padding-left: 8px;
   margin: 4px 0 6px;
-  font-style: italic;
   line-height: 1.4;
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
@@ -249,22 +250,7 @@
   scrollbar-width: thin;
 }
 
-.card-quote {
-  padding: 10px 14px 6px;
-  font-family: var(--font-serif);
-  font-size: 12.5px;
-  color: var(--muted);
-  border-left: 2px solid var(--accent);
-  font-style: italic;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: 8px 0 0 8px;
-}
-
-.card-body { padding: 8px 14px 4px; }
+.card-body { padding: 10px 12px 4px; }
 
 .card-body textarea {
   width: 100%;
@@ -290,7 +276,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px 10px;
+  padding: 6px 12px 8px;
 }
 
 .card-hint {

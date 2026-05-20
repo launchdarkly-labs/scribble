@@ -3,8 +3,43 @@ import { useSignals } from "@preact/signals-react/runtime";
 import { draftRange, createAnnotation } from "../store";
 import { describeRange } from "../anchoring";
 
+// Approximate height of the card without the quote (textarea + actions row).
+// Used to decide whether to flip above the selection when there's no room
+// below — a real concern for multi-paragraph selections whose bottom is
+// off-screen.
+const CARD_HEIGHT = 150;
+const CARD_WIDTH = 340;
+const GAP = 8;
+
+function positionCard(range: Range): React.CSSProperties {
+  const rect = range.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Clamp the selection rect to the viewport before deciding placement.
+  // For a selection that extends past the viewport bottom (multi-paragraph
+  // case), the *visible* bottom is what matters — not the geometric bottom.
+  const visibleTop = Math.max(rect.top, 0);
+  const visibleBottom = Math.min(rect.bottom, vh);
+
+  const spaceBelow = vh - visibleBottom;
+  const spaceAbove = visibleTop;
+  const placeBelow = spaceBelow >= CARD_HEIGHT + GAP || spaceBelow >= spaceAbove;
+
+  const top = placeBelow
+    ? Math.min(visibleBottom + GAP, vh - CARD_HEIGHT - GAP)
+    : Math.max(GAP, visibleTop - CARD_HEIGHT - GAP);
+  const left = Math.max(GAP, Math.min(rect.left, vw - CARD_WIDTH - GAP));
+
+  return { top, left };
+}
+
 /**
- * The "new comment" floating card. Anchored to the saved draft Range's rect.
+ * The "new comment" floating card. Anchored to the draft Range's rect, with
+ * the actual selection persisted as a `scribble-draft` CSS Highlight (see
+ * highlights.ts) — so the user can see *what* they're commenting on in the
+ * document itself rather than via a truncated in-card quote.
+ *
  * Esc cancels, ⌘↩ submits.
  */
 export function DraftCard() {
@@ -24,12 +59,7 @@ export function DraftCard() {
 
   if (!range) return null;
 
-  const rect = range.getBoundingClientRect();
-  const exact = range.toString();
-  const style: React.CSSProperties = {
-    top: Math.min(rect.bottom + 8, window.innerHeight - 220),
-    left: Math.min(rect.left, window.innerWidth - 340),
-  };
+  const style = positionCard(range);
 
   const submit = async () => {
     if (!body.trim() || submitting) return;
@@ -49,7 +79,6 @@ export function DraftCard() {
 
   return (
     <div className="card" style={style} role="dialog" aria-label="New comment">
-      <div className="card-quote">{exact}</div>
       <div className="card-body">
         <textarea
           ref={textareaRef}

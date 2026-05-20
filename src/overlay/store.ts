@@ -35,6 +35,21 @@ export const activeId = signal<string | null>(null);
 export const hoverId = signal<string | null>(null);
 export const draftRange = signal<Range | null>(null);
 export const connected = signal(false);
+/**
+ * Guarded "show the thread card" flag, valued as the id it applies to.
+ *
+ * Set by the dialog coordinator (src/overlay/dialog-coordinator.ts) when
+ * the IntersectionObserver reports that the active annotation's target
+ * has reached the viewport's center band — i.e., the smooth scroll has
+ * settled at the destination. ThreadCard renders iff this matches the
+ * currently-active annotation's id.
+ *
+ * Stored as an id rather than a boolean so a mid-swap (click thread A,
+ * then click thread B before A's card unmounts) doesn't flash A's card
+ * under B's id: the equality check `showThreadForId === ann.id` is its
+ * own guard.
+ */
+export const showThreadForId = signal<string | null>(null);
 /** Set of annotation ids whose selector can no longer be located in the
  * current DOM. Populated by the highlight-sync effect as a side-product of
  * its locate() calls. "Orphan" is a derived view, never persisted. */
@@ -69,12 +84,8 @@ export function connect() {
     const msg = JSON.parse(e.data) as WsMessage;
     if (msg.type === "doc-changed") {
       // The source HTML was edited on disk. Reload so the overlay sees the
-      // fresh DOM; preserve the currently-open thread across the reload.
-      if (activeId.value) {
-        try {
-          sessionStorage.setItem("scribble:restore-active", activeId.value);
-        } catch {}
-      }
+      // fresh DOM. The currently-active thread survives the reload via the
+      // URL hash (see hash-sync.ts), so no sessionStorage stashing needed.
       location.reload();
       return;
     }
