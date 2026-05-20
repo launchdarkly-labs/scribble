@@ -67,6 +67,21 @@ const BatchBody = z.object({
   items: z.array(BatchItem).min(1).max(200),
 });
 
+/**
+ * Aggressive cache prevention for daemon-served resources. `no-store`
+ * alone is *usually* enough, but Chrome's in-memory module cache for
+ * `<script type="module">` can satisfy imports from a stable URL without
+ * a network round-trip on soft refresh, defeating it. Combining no-store
+ * with no-cache + must-revalidate + the legacy Pragma/Expires pair is the
+ * belt-and-suspenders configuration; for the JS bundle we *also* rotate
+ * the URL via a `?v=N` query each rebuild.
+ */
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+  Pragma: "no-cache",
+  Expires: "0",
+} as const;
+
 interface DaemonOptions {
   docPath: string;
   port: number;
@@ -139,6 +154,13 @@ export async function startDaemon(opts: DaemonOptions) {
   }
 
   let bundles: Bundles = await buildBundles();
+  // Monotonic build counter. Appended to the entry script URL as `?v=N` so
+  // each rebuild produces a byte-distinct URL in the HTML, which is the
+  // only reliable way to bypass Chrome's in-memory ES-module cache for
+  // <script type="module"> on a soft refresh. (Cache-Control: no-store on
+  // the asset response isn't sufficient on its own — the browser can
+  // satisfy the import from its module map before it talks to us.)
+  let buildVersion = 1;
 
   // WebSocket clients
   const wsClients = new Set<Bun.ServerWebSocket<unknown>>();
@@ -193,7 +215,8 @@ export async function startDaemon(opts: DaemonOptions) {
 
       // Browser bundles. Each bundle owns a namespace under /_scribble/assets/;
       // disjoint namespaces mean a lookup in one bundle can never resolve into
-      // another's outputs.
+      // another's outputs. Lookup is by pathname only — any `?v=N` cache-
+      // buster on the URL is ignored here.
       if (url.pathname.startsWith("/_scribble/assets/")) {
         const asset =
           bundles.overlay.files.get(url.pathname) ??
@@ -202,7 +225,8 @@ export async function startDaemon(opts: DaemonOptions) {
         return new Response(asset.content, {
           headers: {
             "Content-Type": asset.type,
-            "Cache-Control": "no-store",
+            ...NO_CACHE_HEADERS,
+            "X-Scribble-Build": String(buildVersion),
           },
         });
       }
@@ -226,6 +250,7 @@ export async function startDaemon(opts: DaemonOptions) {
       if (url.pathname === "/" || url.pathname === "/index.html") {
         try {
           bundles = await buildBundles();
+          buildVersion += 1;
         } catch (err) {
           console.error(
             `[scribble] bundle rebuild failed, serving previous: ${(err as Error).message}`,
@@ -246,11 +271,13 @@ export async function startDaemon(opts: DaemonOptions) {
         } else {
           html = original;
         }
-        const injected = injectOverlay(html, bundles.overlay.entryUrl, humanAuthor);
+        const entryUrlWithVersion = `${bundles.overlay.entryUrl}?v=${buildVersion}`;
+        const injected = injectOverlay(html, entryUrlWithVersion, humanAuthor);
         return new Response(injected, {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
-            "Cache-Control": "no-store",
+            ...NO_CACHE_HEADERS,
+            "X-Scribble-Build": String(buildVersion),
           },
         });
       }
