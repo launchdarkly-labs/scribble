@@ -1,6 +1,6 @@
 # scribble
 
-> **Collaborate inline with agents on HTML specs.**
+> **Fast local spec reviews.**
 
 You point scribble at any HTML file. It serves the file in your browser
 with a thin annotation sidebar overlaid on top. You highlight text and
