@@ -19,8 +19,7 @@ All three are in this one Bun project.
 ```bash
 bun install
 bun run typecheck                # tsc --noEmit, should be clean
-bun src/cli.ts open notes/00-initial-design.html
-                                 # opens http://localhost:7878 in a browser
+bun src/cli.ts open <some.html>  # opens http://localhost:7878 in a browser
 ```
 
 Source edits to `src/overlay/*` and `src/daemon/server.ts` rebuild on the next browser refresh (the daemon rebuilds the overlay bundle per `GET /`). No daemon restart needed.
@@ -70,7 +69,6 @@ src/
   skill/SKILL.md         the skill for agents *using* scribble (not this file)
 
 notes/
-  00-initial-design.html design doc + dogfooding target
   ideas.md               living TODO + tried-and-rejected log
 
 scratch/
