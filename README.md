@@ -85,5 +85,4 @@ Code.
 
 Pre-1.0; daily-driver-ish. The interaction loop, persistence, anchoring,
 and re-anchoring on file changes are solid. Distribution beyond `bun link`
-is filed but not done. See `notes/ideas.md` for the living TODO and the
-list of things explicitly tried and rejected.
+is the main thing still to do.

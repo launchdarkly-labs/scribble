@@ -33,7 +33,7 @@ The two principles that organize most of the design:
 1. **Scribble UI is *never* affected by document display.** Chrome lives in a closed shadow DOM. The host doc's CSS cannot reach in.
 2. **Document display is *never* affected by scribble.** We touch the host page in exactly two ways: (a) inject `<div id="scribble-root"></div><script>` near `</body>`, (b) inject a `<style>` that defines `::highlight()` rules and `body { padding-right: 20rem }`. That's it. No reader mode, no theme application to doc, no font overrides.
 
-These rules survived three reverted reader-mode attempts (see `notes/ideas.md` → "Tried and rejected"). Don't reintroduce them.
+These rules survived three reverted reader-mode attempts. Don't reintroduce them — every theming-the-host-doc experiment turned scribble into a reader app, not an annotation tool.
 
 ## Layout
 
@@ -67,9 +67,6 @@ src/
 
   shared/types.ts        zod schemas shared by daemon + overlay
   skill/SKILL.md         the skill for agents *using* scribble (not this file)
-
-notes/
-  ideas.md               living TODO + tried-and-rejected log
 
 scratch/
   raw-repro.ts           HTTP-level reproduction harness (POST+PATCH+GET loop)
@@ -124,7 +121,7 @@ The store has been bitten before (`store.append` race fixed via `O_APPEND`). Add
 ## Known sharp edges
 
 - **`fs.watch` on the file itself** misses atomic-rename saves. We watch the parent dir and filter by basename. Don't change this without testing with `sed -i ''` and `Bun.write`.
-- **The store's `update()` is read-then-append**, which loses on concurrent writes to the same annotation id. Filed in `notes/ideas.md`. Bites only if two agents PATCH the same annotation at the same time, which doesn't happen in practice.
+- **The store's `update()` is read-then-append**, which loses on concurrent writes to the same annotation id. Bites only if two agents PATCH the same annotation at the same time, which doesn't happen in practice. If it ever does, fix is a per-doc write mutex.
 - **The CLI binds `"scribble"` to `./src/cli.ts`** via `package.json`'s `"bin"`. Install path is `bun link` — see README. Compiled-binary distribution (`bun build --compile`) needs overlay-asset embedding, which is in `build.ts` but not finished. Don't ship it until that's done.
 
 ## What's intentionally not here
@@ -137,4 +134,4 @@ These came up and we explicitly punted:
 - Reader mode / Flexoki / Tufte / any theming of the host doc — see "Hard architectural rules" #2
 - Manual light/dark theme toggle for chrome — `prefers-color-scheme` only
 
-See `notes/ideas.md` for the full living list, including filed-but-not-pursued items.
+
