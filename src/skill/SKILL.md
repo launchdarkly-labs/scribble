@@ -5,13 +5,21 @@ description: Collaborates with humans on HTML documents through the Scribble loc
 
 # Scribble
 
-Scribble is a local annotation tool: a daemon serves an HTML document with an overlay where the human selects text and leaves comments. The agent reads those comments and replies via CLI. Built for reviewing the long HTML specs and artifacts agents produce.
+Scribble is a local annotation tool: a daemon serves a document with an overlay where the human selects text and leaves comments. The agent reads those comments and replies via CLI. Built for reviewing the long specs and artifacts agents produce.
 
 The TUI/browser is for the user. Do NOT open URLs or screenshot the overlay. Use `scribble` CLI commands to inspect and mutate annotations.
 
+## Supported inputs
+
+`scribble open` accepts **`.html` and `.md` directly**. Markdown is rendered server-side by the daemon (marked + highlight.js + katex + mermaid), with stable anchoring against the rendered DOM.
+
+- **Do NOT** convert markdown to HTML before opening it. No pandoc, no `markdown` Python lib, no hand-rolled wrapper. Pass the `.md` file straight to `scribble open`.
+- **Do NOT** add styling, themes, or a wrapper page. Scribble is the renderer for markdown; your job is to hand it the source.
+- `.mdx` and other templated formats are *not* supported — point the user at their build output (rendered `.html`) instead.
+
 ## When to use
 
-- **You generated a long HTML doc** (~200+ lines): start a review session for it (see "Bootstrapping" below).
+- **You generated a long doc** (`.html` or `.md`, ~200+ lines): start a review session for it (see "Bootstrapping" below).
 - **The user already has scribble running** and asks you to address comments: start at step 1 of the workflow.
 - **You need targeted feedback** on a specific span mid-task: add an agent-authored annotation pinned to that span and ask the user to reply in the overlay.
 
@@ -19,10 +27,11 @@ Do NOT reach for scribble when the document is short or the question is broad �
 
 ## Bootstrapping a session yourself
 
-When you've just written an HTML artifact the user will review, start scribble for them with `--detach`:
+When you've just written (or been pointed at) a doc the user will review, start scribble for them with `--detach`. Pass the source file as-is — `.md` or `.html`:
 
 ```bash
 scribble open --detach ./report.html
+scribble open --detach ./SKILL.md     # markdown works directly, do not pre-convert
 # prints JSON: { id, docPath, port, pid, url }
 ```
 
