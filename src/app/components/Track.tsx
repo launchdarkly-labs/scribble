@@ -1,25 +1,29 @@
 /**
- * Right-column home for all annotation UI. See the design notes in the
- * v0 `overlay/components/Track.tsx` (now removed) for the rationale; the
- * structural choices carry over unchanged. What's different here:
+ * Right-column annotation UI. Three states:
  *
- *   • All state is read via effect-atom hooks (not signals).
- *   • Anchor positions are read from the iframe's contentDocument, not
- *     the app's own document. The Track itself sits in app coordinate
- *     space, but `anchor.getBoundingClientRect()` from inside the iframe
- *     returns iframe-viewport coords; since the iframe occupies the
- *     app's full vertical extent (top 0, height 100vh), iframe-viewport
- *     y == app y for visible content. So we use those rect tops
- *     directly to position track slots.
- *   • The Track is rendered inside a grid cell that's already sized for
- *     it (32px / 360px); no body padding-right choreography needed.
+ *   • Rail        — collapsed; narrow strip + count + chevron.
+ *   • List mode   — open, no activation. All non-orphan annotations as
+ *                   chips, sorted by document position. Use to browse.
+ *   • Focus mode  — open, with an `activeId` or `draftRange`. A single
+ *                   card pinned to its anchor's spatial position in the
+ *                   track. Use to read and respond.
  *
- * The chip→full-card swap on activation still happens — only when the
- * dialog coordinator (DialogCoordinator) has settled the scroll. That
- * keeps the active card from expanding mid-smooth-scroll if the user
- * clicked a chip whose anchor was offscreen.
+ * Transitions:
+ *   List   → Focus  click a chip / click an in-doc highlight /
+ *                   start a draft / hash deep-link / agent question
+ *                   arrives via WS.
+ *   Focus  → List   Esc, click the track background, click outside the
+ *                   active anchor in the doc, or scroll the anchor far
+ *                   enough out of view (ActivationScroller's IO grace).
+ *   Either → Rail   click ✕ in the track header.
+ *   Rail   → ?      click the rail; lands in List (no activation) or
+ *                   Focus (if there happens to be an activeId/draft).
+ *
+ * Sorting in List mode uses TextPositionSelector.start (a stable text
+ * offset) rather than getBoundingClientRect, so it doesn't depend on
+ * the iframe doc being loaded yet and doesn't churn on scroll.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import {
   annotationsAtom,
@@ -33,7 +37,7 @@ import {
   docTickAtom,
 } from "../atoms";
 import { locate } from "../anchoring";
-import type { Annotation } from "@/shared/types";
+import type { Annotation, Selector } from "@/shared/types";
 import { authorLabel } from "@/shared/types";
 import { ThreadCard } from "./ThreadCard";
 import { DraftCard } from "./DraftCard";
@@ -41,29 +45,21 @@ import { ChipCard } from "./ChipCard";
 import { Rail } from "./Rail";
 import { Scroll } from "./Scroll";
 
-// Layout constants. Keep in sync with .card max-heights in app.css.
+// Spatial constants for focus mode. Keep in sync with .card max-heights.
 const HEADER_H = 48;
 const TRACK_PAD_TOP = 8;
 const GAP = 8;
-const CHIP_H = 64;
 const ACTIVE_H = 360;
 const DRAFT_H = 180;
 
-type Item =
-  | { kind: "draft"; id: "__draft__"; desiredTop: number; height: number }
-  | {
-      kind: "ann";
-      id: string;
-      ann: Annotation;
-      desiredTop: number;
-      height: number;
-    };
+function positionStart(selectors: Selector[]): number {
+  for (const s of selectors) {
+    if (s.type === "TextPositionSelector") return s.start;
+  }
+  return Number.POSITIVE_INFINITY;
+}
 
 export function Track() {
-  // Subscribing to docTick here re-runs layout every iframe scroll frame
-  // so chips follow their anchors. The atom's value is unused — what
-  // matters is the subscription.
-  useAtomValue(docTickAtom);
   const open = useAtomValue(trackOpenAtom);
   const setOpen = useAtomSet(trackOpenAtom);
   const all = useAtomValue(annotationsAtom);
@@ -71,77 +67,23 @@ export function Track() {
   const setActive = useAtomSet(activeIdAtom);
   const orphanSet = useAtomValue(orphanedIdsAtom);
   const draft = useAtomValue(draftRangeAtom);
-  const iframe = useAtomValue(iframeElAtom);
   const unresolvedCount = useAtomValue(unresolvedAtom).length;
   const connected = useAtomValue(connectedAtom);
 
   if (!open) return <Rail />;
 
-  const doc = iframe?.contentDocument ?? null;
-  const vh = typeof window === "undefined" ? 800 : window.innerHeight;
-
-  const items: Item[] = [];
-  let aboveCount = 0;
-  let belowCount = 0;
-
-  if (doc) {
-    for (const a of all) {
-      if (orphanSet.has(a.id)) continue;
-      const range = locate(a.target.selector, doc);
-      if (!range) continue;
-      const r = range.getBoundingClientRect();
-      if (r.bottom < 0) {
-        aboveCount++;
-        continue;
-      }
-      if (r.top > vh) {
-        belowCount++;
-        continue;
-      }
-      const isActive = a.id === aid;
-      items.push({
-        kind: "ann",
-        id: a.id,
-        ann: a,
-        // Translate iframe-viewport top → track-body-relative top.
-        desiredTop: r.top - HEADER_H,
-        height: isActive ? ACTIVE_H : CHIP_H,
-      });
-    }
-
-    if (draft) {
-      const r = draft.getBoundingClientRect();
-      if (r.bottom > 0 && r.top < vh) {
-        items.push({
-          kind: "draft",
-          id: "__draft__",
-          desiredTop: r.top - HEADER_H,
-          height: DRAFT_H,
-        });
-      }
-    }
-  }
-
-  items.sort((a, b) => a.desiredTop - b.desiredTop);
-  let cursor = TRACK_PAD_TOP;
-  const laid = items.map((it) => {
-    const top = Math.max(cursor, it.desiredTop);
-    cursor = top + it.height + GAP;
-    return { ...it, top };
-  });
-
+  const activeAnn = aid ? all.find((a) => a.id === aid) ?? null : null;
+  const focused = !!(activeAnn || draft);
   const orphans = all.filter((a) => orphanSet.has(a.id));
 
   return (
     <aside
       className="track"
       onClick={(e) => {
-        // Click on track chrome (background, header) deselects, mirroring
-        // host-doc background-click behavior.
+        // Click on track chrome (background, header) in focus mode →
+        // exit to list. List mode background clicks are a no-op.
         const t = e.target as Element | null;
-        if (
-          !t?.closest?.(".track-slot, .track-nav, .orphans-drawer, button")
-        ) {
+        if (focused && !t?.closest?.(".track-slot, .orphans-drawer, button")) {
           if (aid) setActive(null);
         }
       }}
@@ -162,96 +104,160 @@ export function Track() {
           ›
         </button>
       </header>
-      <div className="track-body">
-        {all.length === 0 && !draft && (
-          <div className="track-empty">
-            Select text in the document and press <kbd>⌘K</kbd> or click
-            the pill to leave a comment.
-          </div>
-        )}
-        {aboveCount > 0 && doc && (
-          <button
-            type="button"
-            className="track-nav above"
-            onClick={() => scrollToNextAbove(all, orphanSet, doc)}
-            title="Scroll to the next annotation above"
-          >
-            ↑ {aboveCount} above
-          </button>
-        )}
-        {laid.map((item) => (
-          <div key={item.id} className="track-slot" style={{ top: item.top }}>
-            {item.kind === "draft" ? (
-              <DraftCard />
-            ) : item.ann.id === aid ? (
-              <ThreadCard annotation={item.ann} />
-            ) : (
-              <ChipCard annotation={item.ann} />
-            )}
-          </div>
-        ))}
-        {belowCount > 0 && doc && (
-          <button
-            type="button"
-            className="track-nav below"
-            onClick={() => scrollToNextBelow(all, orphanSet, vh, doc)}
-            title="Scroll to the next annotation below"
-          >
-            ↓ {belowCount} below
-          </button>
-        )}
-      </div>
+      {focused ? (
+        <FocusBody ann={activeAnn} draft={draft} />
+      ) : (
+        <ListBody
+          annotations={all}
+          orphanSet={orphanSet}
+          unresolvedCount={unresolvedCount}
+        />
+      )}
       {orphans.length > 0 && <OrphansDrawer orphans={orphans} />}
     </aside>
   );
 }
 
-function scrollToNextAbove(
-  all: Annotation[],
-  orphanSet: Set<string>,
-  doc: Document,
-) {
-  let best: Element | null = null;
-  let bestTop = -Infinity;
-  for (const a of all) {
-    if (orphanSet.has(a.id)) continue;
-    const range = locate(a.target.selector, doc);
-    if (!range) continue;
-    const r = range.getBoundingClientRect();
-    if (r.bottom < 0 && r.top > bestTop) {
-      bestTop = r.top;
-      best =
-        range.startContainer.nodeType === Node.TEXT_NODE
-          ? (range.startContainer as Text).parentElement
-          : (range.startContainer as Element);
+/* ───────────────  List mode  ─────────────── */
+
+function ListBody({
+  annotations,
+  orphanSet,
+  unresolvedCount,
+}: {
+  annotations: Annotation[];
+  orphanSet: Set<string>;
+  unresolvedCount: number;
+}) {
+  const [resolvedExpanded, setResolvedExpanded] = useState(false);
+
+  // Sort once per annotations change; TextPositionSelector.start is the
+  // stable text offset (server-side authored), so this doesn't depend
+  // on the iframe doc being loaded.
+  const { open, resolved } = useMemo(() => {
+    const sorted = [...annotations].sort(
+      (a, b) =>
+        positionStart(a.target.selector) - positionStart(b.target.selector),
+    );
+    const open: Annotation[] = [];
+    const resolved: Annotation[] = [];
+    for (const a of sorted) {
+      if (orphanSet.has(a.id)) continue;
+      (a.status === "open" ? open : resolved).push(a);
     }
+    return { open, resolved };
+  }, [annotations, orphanSet]);
+
+  if (annotations.length === 0) {
+    return (
+      <div className="track-body">
+        <div className="track-empty">
+          Select text in the document and press <kbd>⌘K</kbd> or click the
+          pill to leave a comment.
+        </div>
+      </div>
+    );
   }
-  best?.scrollIntoView({ block: "center" });
+
+  return (
+    <Scroll className="track-list">
+      {open.map((a) => (
+        <ChipCard key={a.id} annotation={a} />
+      ))}
+      {resolved.length > 0 && (
+        <>
+          <button
+            type="button"
+            className={`section-label ${resolvedExpanded ? "" : "collapsed"}`}
+            onClick={() => setResolvedExpanded((v) => !v)}
+          >
+            <span className="caret">▾</span>
+            <span>Resolved</span>
+            <span className="count">· {resolved.length}</span>
+          </button>
+          {resolvedExpanded &&
+            resolved.map((a) => <ChipCard key={a.id} annotation={a} />)}
+        </>
+      )}
+      {unresolvedCount === 0 && resolved.length > 0 && !resolvedExpanded && (
+        <div className="track-empty-soft">
+          All open threads resolved. ✓
+        </div>
+      )}
+    </Scroll>
+  );
 }
 
-function scrollToNextBelow(
-  all: Annotation[],
-  orphanSet: Set<string>,
-  vh: number,
-  doc: Document,
-) {
-  let best: Element | null = null;
-  let bestTop = Infinity;
-  for (const a of all) {
-    if (orphanSet.has(a.id)) continue;
-    const range = locate(a.target.selector, doc);
-    if (!range) continue;
-    const r = range.getBoundingClientRect();
-    if (r.top > vh && r.top < bestTop) {
-      bestTop = r.top;
-      best =
-        range.startContainer.nodeType === Node.TEXT_NODE
-          ? (range.startContainer as Text).parentElement
-          : (range.startContainer as Element);
+/* ───────────────  Focus mode  ─────────────── */
+
+function FocusBody({
+  ann,
+  draft,
+}: {
+  ann: Annotation | null;
+  draft: Range | null;
+}) {
+  // Subscribe to docTick so the focused card follows iframe scroll.
+  useAtomValue(docTickAtom);
+  const iframe = useAtomValue(iframeElAtom);
+  const doc = iframe?.contentDocument ?? null;
+
+  type Item =
+    | { kind: "ann"; top: number; height: number; ann: Annotation }
+    | { kind: "draft"; top: number; height: number };
+
+  const items: Item[] = [];
+  if (ann && doc) {
+    const range = locate(ann.target.selector, doc);
+    if (range) {
+      const r = range.getBoundingClientRect();
+      items.push({
+        kind: "ann",
+        top: r.top - HEADER_H,
+        height: ACTIVE_H,
+        ann,
+      });
     }
   }
-  best?.scrollIntoView({ block: "center" });
+  if (draft) {
+    const r = draft.getBoundingClientRect();
+    items.push({
+      kind: "draft",
+      top: r.top - HEADER_H,
+      height: DRAFT_H,
+    });
+  }
+
+  // Resolve collisions (relevant only when both active and draft are
+  // open and their anchors are close together).
+  items.sort((a, b) => a.top - b.top);
+  let cursor = TRACK_PAD_TOP;
+  const laid = items.map((it) => {
+    const top = Math.max(cursor, it.top);
+    cursor = top + it.height + GAP;
+    return { ...it, top };
+  });
+
+  return (
+    <div className="track-body">
+      {laid.map((item, i) => (
+        <div
+          key={item.kind === "ann" ? item.ann.id : `__draft__${i}`}
+          className="track-slot"
+          style={{ top: item.top }}
+        >
+          {item.kind === "draft" ? (
+            <DraftCard />
+          ) : (
+            <ThreadCard annotation={item.ann} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
 }
+
+/* ───────────────  Orphans drawer  ─────────────── */
 
 function OrphansDrawer({ orphans }: { orphans: Annotation[] }) {
   const [open, setOpen] = useState(true);
