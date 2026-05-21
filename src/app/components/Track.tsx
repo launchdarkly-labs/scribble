@@ -26,7 +26,7 @@
 import { useMemo, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { Drawer } from "@base-ui/react/drawer";
-import { X, MessageSquareText, ChevronLeftThin } from "../icons";
+import { X, MessageSquareText, ChevronLeft } from "lucide-react";
 import {
   annotationsAtom,
   activeIdAtom,
@@ -153,7 +153,7 @@ function RailContent({
         {count > 0 && <span className="rail-count">{count}</span>}
       </div>
       <div className="rail-wordmark">Scribble</div>
-      <ChevronLeftThin className="rail-chev" />
+      <ChevronLeft className="rail-chev" size={16} strokeWidth={1.5} aria-hidden="true" />
     </>
   );
 }

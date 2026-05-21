@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
-import { Trash2, Check, Undo2, Send } from "../icons";
+import { Trash2, Check, Undo2, Send } from "lucide-react";
 import { activeIdAtom, humanAuthorAtom } from "../atoms";
 import {
   replyToAnnotation,

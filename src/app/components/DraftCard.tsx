@@ -10,7 +10,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
-import { X, Send } from "../icons";
+import { X, Send } from "lucide-react";
 import {
   draftRangeAtom,
   humanAuthorAtom,
