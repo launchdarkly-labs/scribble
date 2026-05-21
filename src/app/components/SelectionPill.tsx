@@ -15,7 +15,12 @@
  */
 import { useEffect, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
-import { iframeElAtom, draftRangeAtom, docTickAtom } from "../atoms";
+import {
+  iframeElAtom,
+  draftRangeAtom,
+  docTickAtom,
+  trackOpenAtom,
+} from "../atoms";
 
 export function SelectionPill() {
   const iframe = useAtomValue(iframeElAtom);
@@ -23,6 +28,7 @@ export function SelectionPill() {
   // ticks via IframeDoc) cause us to re-read getSelection().
   useAtomValue(docTickAtom);
   const setDraftRange = useAtomSet(draftRangeAtom);
+  const setTrackOpen = useAtomSet(trackOpenAtom);
   const [rect, setRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
@@ -79,6 +85,7 @@ export function SelectionPill() {
         setDraftRange(sel.getRangeAt(0).cloneRange());
         sel.removeAllRanges();
         setRect(null);
+        setTrackOpen(true);
       }}
     >
       <span>Comment</span>

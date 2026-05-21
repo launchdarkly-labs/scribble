@@ -17,7 +17,6 @@ import { HashSync } from "./HashSync";
 import { KeyboardShortcuts } from "./KeyboardShortcuts";
 import { HighlightSync } from "./HighlightSync";
 import { ActivationScroller } from "./ActivationScroller";
-import { AutoOpenTrack } from "./AutoOpenTrack";
 
 export function App() {
   const open = useAtomValue(trackOpenAtom);
@@ -31,7 +30,6 @@ export function App() {
       <KeyboardShortcuts />
       <HighlightSync />
       <ActivationScroller />
-      <AutoOpenTrack />
     </div>
   );
 }

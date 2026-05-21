@@ -29,6 +29,7 @@ import {
   draftRangeAtom,
   docTickAtom,
   annotationsAtom,
+  trackOpenAtom,
 } from "./atoms";
 import { annotationAt } from "./highlights";
 
@@ -91,6 +92,7 @@ export function IframeDoc() {
   const setActiveId = useAtomSet(activeIdAtom);
   const setHoverId = useAtomSet(hoverIdAtom);
   const setDraftRange = useAtomSet(draftRangeAtom);
+  const setTrackOpen = useAtomSet(trackOpenAtom);
   const registry = useContext(RegistryContext);
 
   // Wire up the iframe on every (re)load — doc-changed reloads the
@@ -163,7 +165,9 @@ export function IframeDoc() {
         const id = annotationAt(e.clientX, e.clientY, list, doc);
         if (id) {
           const cur = registry.get(activeIdAtom);
-          setActiveId(cur === id ? null : id);
+          const next = cur === id ? null : id;
+          setActiveId(next);
+          if (next) setTrackOpen(true);
           return;
         }
         if (registry.get(activeIdAtom)) setActiveId(null);
@@ -182,6 +186,7 @@ export function IframeDoc() {
             e.preventDefault();
             setDraftRange(sel.getRangeAt(0).cloneRange());
             sel.removeAllRanges();
+            setTrackOpen(true);
           }
         }
         if (e.key === "Escape") {
@@ -223,6 +228,7 @@ export function IframeDoc() {
     setActiveId,
     setHoverId,
     setDraftRange,
+    setTrackOpen,
     registry,
   ]);
 
