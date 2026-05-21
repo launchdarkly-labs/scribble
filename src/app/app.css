@@ -579,10 +579,15 @@ kbd {
 .btn svg {
   display: block;
 }
-.btn:hover:not(:disabled) {
+/* Primary button. When the form input is empty we want the tooltip
+   to still appear on hover, so disabled buttons use `aria-disabled`
+   (via base-ui's focusableWhenDisabled) instead of the native disabled
+   attribute. Both selectors target the same visual state. */
+.btn:hover:not(:disabled):not([aria-disabled="true"]) {
   background: oklch(from var(--ink) calc(l + 0.06) c h);
 }
-.btn:disabled {
+.btn:disabled,
+.btn[aria-disabled="true"] {
   opacity: 0.4;
   cursor: not-allowed;
 }

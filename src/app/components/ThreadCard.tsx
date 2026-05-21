@@ -163,6 +163,7 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
               className="btn"
               onClick={submitReply}
               disabled={!reply.trim() || submitting}
+              focusableWhenDisabled
             >
               <Send size={14} />
               <span>Reply</span>

@@ -101,6 +101,7 @@ export function DraftCard() {
               className="btn"
               disabled={!body.trim() || submitting}
               onClick={submit}
+              focusableWhenDisabled
             >
               <Send size={14} />
               <span>Comment</span>

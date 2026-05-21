@@ -45,7 +45,7 @@ import type { Annotation, Selector } from "@/shared/types";
 import { authorLabel } from "@/shared/types";
 import { ThreadCard } from "./ThreadCard";
 import { DraftCard } from "./DraftCard";
-import { ChipCard } from "./ChipCard";
+import { Chip } from "./Chip";
 import { Scroll } from "./Scroll";
 
 // Layout constants. Keep in sync with .card max-heights in app.css.
@@ -202,7 +202,7 @@ function ListBody({
   return (
     <Scroll className="track-list">
       {open.map((a) => (
-        <ChipCard key={a.id} annotation={a} />
+        <Chip key={a.id} annotation={a} />
       ))}
       {resolved.length > 0 && (
         <>
@@ -215,7 +215,7 @@ function ListBody({
             <span className="count">· {resolved.length}</span>
           </Button>
           {resolvedExpanded &&
-            resolved.map((a) => <ChipCard key={a.id} annotation={a} />)}
+            resolved.map((a) => <Chip key={a.id} annotation={a} />)}
         </>
       )}
       {open.length === 0 && resolved.length > 0 && !resolvedExpanded && (
