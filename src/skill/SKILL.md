@@ -1,9 +1,9 @@
 ---
-name: scribble-review
+name: scribble
 description: Collaborates with humans on HTML documents through the Scribble local annotation tool. Use when you have just generated a long HTML artifact the user will review, when the user has annotations to address on an existing doc, or when you need targeted human feedback on a specific section mid-task.
 ---
 
-# Scribble Review
+# Scribble
 
 Scribble is a local annotation tool: a daemon serves an HTML document with an overlay where the human selects text and leaves comments. The agent reads those comments and replies via CLI. Built for reviewing the long HTML specs and artifacts agents produce.
 
