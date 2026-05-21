@@ -2,19 +2,27 @@
  * Card for composing a new annotation. The Track decides where to place
  * it (at the draft selection's vertical position); this component just
  * renders the body. The draft selection itself is visualized in-doc via
- * the `scribble-draft` CSS Highlight (see highlights.ts) so the user can
- * see *what* they're commenting on without the card showing a quote.
+ * the `scribble-draft` CSS Highlight (see app/highlights.ts) so the
+ * user can see *what* they're commenting on without the card showing a
+ * quote.
  *
  * Esc cancels, ⌘↩ submits.
  */
 import { useEffect, useRef, useState } from "react";
-import { useSignals } from "@preact/signals-react/runtime";
-import { draftRange, createAnnotation } from "../store";
+import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
+import {
+  draftRangeAtom,
+  humanAuthorAtom,
+  iframeElAtom,
+} from "../atoms";
 import { describeRange } from "../anchoring";
+import { createAnnotation } from "../api";
 
 export function DraftCard() {
-  useSignals();
-  const range = draftRange.value;
+  const range = useAtomValue(draftRangeAtom);
+  const setDraftRange = useAtomSet(draftRangeAtom);
+  const author = useAtomValue(humanAuthorAtom);
+  const iframe = useAtomValue(iframeElAtom);
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -22,7 +30,6 @@ export function DraftCard() {
   useEffect(() => {
     if (range) {
       setBody("");
-      // Defer focus until card is in DOM
       requestAnimationFrame(() =>
         textareaRef.current?.focus({ preventScroll: true }),
       );
@@ -33,15 +40,24 @@ export function DraftCard() {
 
   const submit = async () => {
     if (!body.trim() || submitting) return;
+    const doc = iframe?.contentDocument;
+    if (!doc) {
+      console.warn("[scribble] iframe doc unavailable, cannot describe range");
+      return;
+    }
     setSubmitting(true);
     try {
-      const selectors = describeRange(range, document.body);
+      const selectors = describeRange(range, doc);
       if (selectors.length === 0) {
         console.warn("[scribble] could not describe range");
         return;
       }
-      await createAnnotation({ selectors, body: body.trim() });
-      draftRange.value = null;
+      await createAnnotation({
+        selectors,
+        body: body.trim(),
+        author,
+      });
+      setDraftRange(null);
     } finally {
       setSubmitting(false);
     }
@@ -58,7 +74,7 @@ export function DraftCard() {
           onKeyDown={(e) => {
             if (e.key === "Escape") {
               e.preventDefault();
-              draftRange.value = null;
+              setDraftRange(null);
             } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
               e.preventDefault();
               void submit();
@@ -74,7 +90,7 @@ export function DraftCard() {
           <button
             type="button"
             className="btn ghost"
-            onClick={() => (draftRange.value = null)}
+            onClick={() => setDraftRange(null)}
           >
             Cancel
           </button>

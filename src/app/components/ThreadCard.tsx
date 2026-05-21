@@ -2,29 +2,29 @@
  * Expanded thread view for an annotation. The original comment + all
  * replies + a reply textarea + actions (Resolve / Reopen / Delete).
  *
- * Positioning is the Track's responsibility — this component renders the
- * card body and nothing else. Mounting/unmounting is decided by Track
- * based on `activeId` and `showThreadForId` (see Track.tsx and
- * dialog-coordinator.ts for the activation→reveal flow).
+ * Positioning is the Track's responsibility — this component renders
+ * the card body and nothing else.
  */
 import { useEffect, useRef, useState } from "react";
+import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
+import { activeIdAtom, humanAuthorAtom } from "../atoms";
 import {
-  activeId,
   replyToAnnotation,
   resolveAnnotation,
   reopenAnnotation,
   deleteAnnotation,
-} from "../store";
+} from "../api";
 import type { Annotation, Author } from "@/shared/types";
 import { authorLabel } from "@/shared/types";
 import { Scroll } from "./Scroll";
 
 export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
+  const setActive = useAtomSet(activeIdAtom);
+  const author = useAtomValue(humanAuthorAtom);
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Reset reply field when switching annotations.
   useEffect(() => {
     setReply("");
     requestAnimationFrame(() =>
@@ -32,15 +32,13 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
     );
   }, [ann.id]);
 
-  const close = () => {
-    activeId.value = null;
-  };
+  const close = () => setActive(null);
 
   const submitReply = async () => {
     if (!reply.trim() || submitting) return;
     setSubmitting(true);
     try {
-      await replyToAnnotation(ann.id, reply.trim());
+      await replyToAnnotation(ann.id, reply.trim(), author);
       setReply("");
       textareaRef.current?.focus();
     } finally {
@@ -52,7 +50,7 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
     if (submitting) return;
     setSubmitting(true);
     try {
-      await resolveAnnotation(ann.id, reply.trim() || undefined);
+      await resolveAnnotation(ann.id, reply.trim() || undefined, author);
       setReply("");
       close();
     } finally {

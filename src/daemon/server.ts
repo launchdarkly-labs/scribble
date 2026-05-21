@@ -98,19 +98,21 @@ export async function startDaemon(opts: DaemonOptions) {
   // once at startup; the overlay reads it from an injected <meta> tag.
   const humanAuthor = resolveHumanAuthor(docPath);
 
-  // Two browser-facing bundles: the overlay (React, runs in the closed
-  // shadow root) and the markdown runtime (vanilla, runs on the host page).
-  // Each bundle owns a URL namespace under /_scribble/assets/<ns>/...,
-  // which makes collisions across bundles structurally impossible — their
-  // output basenames don't have to be globally unique because they live in
-  // disjoint URL spaces. Rebuilt on every doc reload in dev.
+  // Two browser-facing bundles: the SPA app (React, owns the entire
+  // browser-side UI; the doc lives in an iframe inside it) and the
+  // markdown runtime (vanilla, runs *inside* the iframe doc when the
+  // doc is rendered markdown and contains mermaid blocks). Each bundle
+  // owns a URL namespace under /_scribble/assets/<ns>/..., which makes
+  // collisions across bundles structurally impossible — their output
+  // basenames don't have to be globally unique because they live in
+  // disjoint URL spaces. Rebuilt on every doc/app reload in dev.
   type Bundle = {
-    /** URL path → served content (e.g. "/_scribble/assets/overlay/main.js"). */
+    /** URL path → served content (e.g. "/_scribble/assets/app/main.js"). */
     files: Map<string, { content: ArrayBuffer; type: string }>;
     /** Full URL of the entry-point script. */
     entryUrl: string;
   };
-  type Bundles = { overlay: Bundle; mdRuntime: Bundle };
+  type Bundles = { app: Bundle; mdRuntime: Bundle };
 
   async function buildOneBundle(
     srcRelative: string,
@@ -146,11 +148,11 @@ export async function startDaemon(opts: DaemonOptions) {
   }
 
   async function buildBundles(): Promise<Bundles> {
-    const [overlay, mdRuntime] = await Promise.all([
-      buildOneBundle("../overlay/main.tsx", "overlay"),
+    const [app, mdRuntime] = await Promise.all([
+      buildOneBundle("../app/main.tsx", "app"),
       buildOneBundle("../markdown-runtime/runtime.ts", "runtime"),
     ]);
-    return { overlay, mdRuntime };
+    return { app, mdRuntime };
   }
 
   let bundles: Bundles = await buildBundles();
@@ -219,7 +221,7 @@ export async function startDaemon(opts: DaemonOptions) {
       // buster on the URL is ignored here.
       if (url.pathname.startsWith("/_scribble/assets/")) {
         const asset =
-          bundles.overlay.files.get(url.pathname) ??
+          bundles.app.files.get(url.pathname) ??
           bundles.mdRuntime.files.get(url.pathname);
         if (!asset) return new Response("Not found", { status: 404 });
         return new Response(asset.content, {
@@ -244,9 +246,9 @@ export async function startDaemon(opts: DaemonOptions) {
         return handleApi(req, url, docPath, broadcast);
       }
 
-      // The document, with overlay injected. Rebuild the overlay first so
-      // source edits are picked up without restarting the daemon. On build
-      // error we keep serving the previous successful build.
+      // SPA shell. Tiny HTML that loads the app bundle. Rebuild bundles
+      // first so source edits are picked up without a daemon restart. On
+      // build error, keep serving the previous successful build.
       if (url.pathname === "/" || url.pathname === "/index.html") {
         try {
           bundles = await buildBundles();
@@ -256,6 +258,27 @@ export async function startDaemon(opts: DaemonOptions) {
             `[scribble] bundle rebuild failed, serving previous: ${(err as Error).message}`,
           );
         }
+        const entryUrlWithVersion = `${bundles.app.entryUrl}?v=${buildVersion}`;
+        const shell = buildAppShell({
+          title: isMarkdownPath(docPath)
+            ? extractTitle(await Bun.file(docPath).text(), basename(docPath))
+            : basename(docPath),
+          appEntryUrl: entryUrlWithVersion,
+          humanAuthor,
+        });
+        return new Response(shell, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            ...NO_CACHE_HEADERS,
+            "X-Scribble-Build": String(buildVersion),
+          },
+        });
+      }
+
+      // The document itself, served untouched (or markdown-rendered for
+      // .md). Loaded by the app's iframe. No scribble UI is injected
+      // here — the chrome lives in the SPA, outside the iframe.
+      if (url.pathname === "/_scribble/doc") {
         const original = await Bun.file(docPath).text();
         let html: string;
         if (isMarkdownPath(docPath)) {
@@ -263,17 +286,13 @@ export async function startDaemon(opts: DaemonOptions) {
           html = buildMarkdownShell({
             title: extractTitle(original, basename(docPath)),
             rendered,
-            // Only inject the runtime <script> if there are diagrams to
-            // render. The bundle itself is always built; this just avoids
-            // having the browser fetch+parse it when it would do nothing.
+            // Only inject the mermaid runtime when there are diagrams.
             mdRuntimeEntryUrl: rendered.hasMermaid ? bundles.mdRuntime.entryUrl : null,
           });
         } else {
           html = original;
         }
-        const entryUrlWithVersion = `${bundles.overlay.entryUrl}?v=${buildVersion}`;
-        const injected = injectOverlay(html, entryUrlWithVersion, humanAuthor);
-        return new Response(injected, {
+        return new Response(html, {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             ...NO_CACHE_HEADERS,
@@ -470,27 +489,36 @@ async function serveMarkdownAsset(subpath: string): Promise<Response> {
   });
 }
 
-function injectOverlay(html: string, entryUrl: string, humanAuthor: Author): string {
-  const safeAuthor = JSON.stringify(humanAuthor)
+/**
+ * Tiny HTML shell that hosts the React SPA. The app mounts into #root
+ * and reads the local human's identity from the <meta> tag. The doc
+ * itself is loaded by the app inside an iframe (/_scribble/doc) — no
+ * doc content lives in this shell.
+ */
+function buildAppShell(opts: {
+  title: string;
+  appEntryUrl: string;
+  humanAuthor: Author;
+}): string {
+  const safeAuthor = JSON.stringify(opts.humanAuthor)
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;");
-  const head = `<meta name="scribble-user" content="${safeAuthor}">`;
-  const snippet = `
-<!-- scribble overlay -->
-<div id="scribble-root"></div>
-<script type="module" src="${entryUrl}"></script>
+  const safeTitle = opts.title
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;");
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="scribble-user" content="${safeAuthor}">
+  <title>${safeTitle} · scribble</title>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="${opts.appEntryUrl}"></script>
+</body>
+</html>
 `;
-  let out = html;
-  if (out.includes("</head>")) {
-    out = out.replace("</head>", `${head}\n</head>`);
-  } else {
-    out = head + out;
-  }
-  if (out.includes("</body>")) {
-    out = out.replace("</body>", `${snippet}\n</body>`);
-  } else {
-    out = out + snippet;
-  }
-  return out;
 }

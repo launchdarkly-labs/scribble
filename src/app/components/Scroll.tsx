@@ -1,12 +1,11 @@
 /**
  * Themed scroll container. Thin wrapper around base-ui ScrollArea so
- * callsites don't repeat the Root/Viewport/Scrollbar/Thumb dance for
- * each scrollable region.
+ * callsites don't repeat the Root/Viewport/Scrollbar/Thumb dance.
  *
- * Styling lives in overlay.css under `.scroll-*` selectors and the
- * `.scroll-viewport` child selector. To add padding/layout to a viewport,
- * target `.<your-class> > .scroll-viewport` rather than `<your-class>`
- * directly — the outer class lands on Root, which is overflow: hidden.
+ * Styling lives in app.css under `.scroll-*` selectors. To add
+ * padding/layout to a viewport, target `.<your-class> > .scroll-viewport`
+ * rather than `.<your-class>` directly — the outer class lands on Root,
+ * which is overflow: hidden.
  */
 import * as React from "react";
 import { ScrollArea } from "@base-ui-components/react/scroll-area";

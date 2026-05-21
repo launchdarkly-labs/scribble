@@ -1,21 +1,21 @@
 /**
- * Compact card for an annotation in the track. Click → activates the
- * annotation, which expands the chip in place into a full ThreadCard
- * (the swap happens inside Track based on activeId / showThreadForId).
- *
- * No positioning logic; the Track decides where this lives.
+ * Compact card for an annotation in the track. Click activates the
+ * annotation, which causes the Track to swap the chip for a full
+ * ThreadCard in place.
  */
-import { useSignals } from "@preact/signals-react/runtime";
-import { activeId, hoverId } from "../store";
+import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
+import { activeIdAtom, hoverIdAtom } from "../atoms";
 import type { Annotation } from "@/shared/types";
 import { authorLabel } from "@/shared/types";
 
 export function ChipCard({ annotation: ann }: { annotation: Annotation }) {
-  useSignals();
-  const isHover = hoverId.value === ann.id;
-  const activate = () => {
-    activeId.value = ann.id;
-  };
+  const hoverId = useAtomValue(hoverIdAtom);
+  const setActive = useAtomSet(activeIdAtom);
+  const setHover = useAtomSet(hoverIdAtom);
+  const isHover = hoverId === ann.id;
+
+  const activate = () => setActive(ann.id);
+
   return (
     <div
       className={`chip ${ann.status} ${isHover ? "hover" : ""}`}
@@ -28,11 +28,9 @@ export function ChipCard({ annotation: ann }: { annotation: Annotation }) {
           activate();
         }
       }}
-      onMouseEnter={() => {
-        hoverId.value = ann.id;
-      }}
+      onMouseEnter={() => setHover(ann.id)}
       onMouseLeave={() => {
-        if (hoverId.value === ann.id) hoverId.value = null;
+        if (hoverId === ann.id) setHover(null);
       }}
     >
       <div className="chip-head">
