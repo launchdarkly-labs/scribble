@@ -123,16 +123,6 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
         />
       </div>
       <div className="card-actions">
-        <span className="card-hint">
-          <kbd>⌘</kbd>
-          <kbd>Enter</kbd>
-          <span>reply</span>
-          <span className="sep">·</span>
-          <kbd>⌘</kbd>
-          <kbd>⇧</kbd>
-          <kbd>Enter</kbd>
-          <span>resolve</span>
-        </span>
         <div className="card-buttons">
           <Tip label="Delete annotation">
             <button
@@ -170,15 +160,17 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
               </button>
             </Tip>
           )}
-          <button
-            type="button"
-            className="btn"
-            onClick={submitReply}
-            disabled={!reply.trim() || submitting}
-          >
-            <Send size={14} />
-            <span>Reply</span>
-          </button>
+          <Tip kbd={["⌘", "Enter"]}>
+            <button
+              type="button"
+              className="btn"
+              onClick={submitReply}
+              disabled={!reply.trim() || submitting}
+            >
+              <Send size={14} />
+              <span>Reply</span>
+            </button>
+          </Tip>
         </div>
       </div>
     </div>

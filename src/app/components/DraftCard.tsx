@@ -85,14 +85,6 @@ export function DraftCard() {
         />
       </div>
       <div className="card-actions">
-        <span className="card-hint">
-          <kbd>⌘</kbd>
-          <kbd>Enter</kbd>
-          <span>comment</span>
-          <span className="sep">·</span>
-          <kbd>Esc</kbd>
-          <span>cancel</span>
-        </span>
         <div className="card-buttons">
           <Tip label="Cancel" kbd={["Esc"]}>
             <button
@@ -104,15 +96,17 @@ export function DraftCard() {
               <X size={16} />
             </button>
           </Tip>
-          <button
-            type="button"
-            className="btn"
-            disabled={!body.trim() || submitting}
-            onClick={submit}
-          >
-            <Send size={14} />
-            <span>Comment</span>
-          </button>
+          <Tip kbd={["⌘", "Enter"]}>
+            <button
+              type="button"
+              className="btn"
+              disabled={!body.trim() || submitting}
+              onClick={submit}
+            >
+              <Send size={14} />
+              <span>Comment</span>
+            </button>
+          </Tip>
         </div>
       </div>
     </div>

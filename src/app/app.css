@@ -52,8 +52,17 @@ body {
   padding: 0;
   height: 100%;
 }
+/* Anchor 1rem = 16px and use rem for typography throughout so the
+   scribble UI scales coherently with the user's browser font setting
+   and with our own future tweaks. Non-font values (padding, border
+   radius, gaps, icon sizes) stay in px since they're structural. */
+html {
+  font-size: 16px;
+}
 body {
   font-family: var(--font-ui);
+  font-size: 1rem;
+  line-height: 1.45;
   color: var(--ink);
   background: var(--bg);
 }
@@ -99,7 +108,7 @@ body {
   border: none;
   border-radius: 999px;
   padding: 6px 12px;
-  font: 600 12px/1 var(--font-ui);
+  font: 600 0.875rem/1 var(--font-ui);
   cursor: pointer;
   box-shadow: var(--shadow);
   z-index: 10;
@@ -110,7 +119,7 @@ body {
 }
 .pill .kbd {
   font-weight: 400;
-  font-size: 11px;
+  font-size: 0.75rem;
   opacity: 0.55;
   letter-spacing: 0.05em;
 }
@@ -174,7 +183,7 @@ body {
   color: var(--ink);
 }
 .rail-count {
-  font: 600 11px/1 var(--font-ui);
+  font: 600 0.6875rem/1 var(--font-ui);
   color: var(--ink);
   background: var(--accent-soft);
   border-radius: 999px;
@@ -185,7 +194,7 @@ body {
   writing-mode: vertical-rl;
   text-orientation: mixed;
   transform: rotate(180deg);
-  font: 600 9px/1 var(--font-ui);
+  font: 600 0.5625rem/1 var(--font-ui);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--faint);
@@ -193,7 +202,6 @@ body {
 }
 .rail-chev {
   margin-top: auto;
-  font: 600 18px/1 var(--font-ui);
   opacity: 0.6;
 }
 .rail:hover .rail-chev {
@@ -222,7 +230,7 @@ body {
   border-left: 1px solid var(--rule);
   box-shadow: var(--shadow);
   font-family: var(--font-ui);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.45;
   color: var(--ink);
   display: flex;
@@ -256,11 +264,11 @@ body {
 .track-title {
   font-weight: 600;
   letter-spacing: -0.01em;
-  font-size: 15px;
+  font-size: 0.9375rem;
   flex: 1 1 auto;
 }
 .track-status {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .track-status .dot {
@@ -281,7 +289,7 @@ body {
   border: none;
   color: var(--muted);
   cursor: pointer;
-  font: 600 18px/1 var(--font-ui);
+  font: 600 1.125rem/1 var(--font-ui);
   padding: 4px 8px;
   border-radius: 4px;
   flex: 0 0 auto;
@@ -305,16 +313,9 @@ body {
   color: var(--muted);
   font-style: italic;
   line-height: 1.5;
-  font-size: 12px;
+  font-size: 0.8125rem;
 }
 .track-empty kbd {
-  font-family: var(--font-ui);
-  font-size: 10px;
-  padding: 1px 4px;
-  border: 1px solid var(--rule);
-  border-radius: 3px;
-  background: var(--bg);
-  color: var(--muted);
   font-style: normal;
 }
 
@@ -341,7 +342,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 10px 0 4px;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -370,7 +371,7 @@ body {
 .track-empty-soft {
   color: var(--muted);
   font-style: italic;
-  font-size: 12px;
+  font-size: 0.8125rem;
   padding: 12px 0;
   text-align: center;
 }
@@ -403,7 +404,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 .chip-head .chip-author {
@@ -413,7 +414,7 @@ body {
 }
 
 .chip-body {
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.4;
   color: var(--ink);
   white-space: pre-wrap;
@@ -423,13 +424,13 @@ body {
   overflow: hidden;
 }
 .chip-meta {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--faint);
 }
 
 .status-pill {
   display: inline-block;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -456,7 +457,7 @@ body {
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  font: 13px/1.5 var(--font-ui);
+  font: 0.8125rem/1.5 var(--font-ui);
   color: var(--ink);
   overflow-x: hidden;
   overflow-y: auto;
@@ -475,7 +476,7 @@ body {
   border-radius: 6px;
   padding: 8px 10px;
   font: inherit;
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.45;
   color: inherit;
   background: var(--surface);
@@ -494,40 +495,29 @@ body {
   color: var(--faint);
 }
 
+/* Card actions sit flush right — we dropped the inline kbd hint in
+   favor of tooltips on the buttons. */
 .card-actions {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   padding: 6px 10px 8px;
 }
-/* Card-actions inline hint: keys live as individual <kbd> badges with
-   small connective words between (e.g. "⌘ Enter reply · ⌘ ⇧ Enter
-   resolve"). Matches the Linear-style chip look the user pointed at. */
-.card-hint {
-  font-size: 13px;
-  color: var(--muted);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-.card-hint .sep {
-  color: var(--faint);
-  margin: 0 2px;
-}
-.card-hint kbd,
-.tooltip-kbds kbd {
+
+/* Shared kbd badge style. Subtle on light/surface backgrounds; the
+   tooltip override below inverts it for the dark popup. */
+kbd {
   font-family: var(--font-ui);
   font-weight: 500;
-  font-size: 14px;
+  font-size: 0.8125rem;
   line-height: 1;
-  padding: 2px 6px;
+  padding: 2px 5px;
   border: 1px solid var(--rule);
   border-radius: 4px;
-  background: var(--bg);
-  color: var(--ink);
-  min-width: 22px;
+  background: transparent;
+  color: var(--muted);
+  min-width: 20px;
   text-align: center;
   display: inline-block;
 }
@@ -579,7 +569,7 @@ body {
   border: none;
   border-radius: 6px;
   padding: 6px 12px;
-  font: 600 14px/1.2 var(--font-ui);
+  font: 600 0.875rem/1.2 var(--font-ui);
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;
@@ -641,7 +631,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
 }
 .thread-message-head .author {
@@ -653,10 +643,10 @@ body {
 }
 .thread-message-head time {
   color: var(--faint);
-  font-size: 10.5px;
+  font-size: 0.65625rem;
 }
 .thread-message-body {
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.5;
   color: var(--ink);
   white-space: pre-wrap;
@@ -683,7 +673,7 @@ body {
   align-items: center;
   gap: 6px;
   padding: 10px 16px;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -732,7 +722,7 @@ body {
 }
 .orphan-quote {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--muted);
   line-height: 1.4;
   text-decoration: line-through;
@@ -791,7 +781,7 @@ body {
   color: var(--bg);
   padding: 6px 10px;
   border-radius: 6px;
-  font: 13px/1.3 var(--font-ui);
+  font: 0.8125rem/1.3 var(--font-ui);
   box-shadow: var(--shadow);
   max-width: 260px;
   display: inline-flex;
@@ -826,9 +816,9 @@ body {
   gap: 3px;
 }
 .tooltip-kbds kbd {
-  /* Override the .card-hint kbd theme — inside a dark tooltip, kbds use
-     a translucent light fill instead of the page background. */
-  background: oklch(from var(--bg) l c h / 0.18);
-  border-color: oklch(from var(--bg) l c h / 0.25);
+  /* Override the base kbd theme — inside a dark tooltip, kbds use a
+     translucent light fill instead of a transparent surface. */
+  background: oklch(from var(--bg) l c h / 0.16);
+  border-color: oklch(from var(--bg) l c h / 0.22);
   color: var(--bg);
 }

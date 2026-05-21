@@ -11,7 +11,9 @@ import * as React from "react";
 import { Tooltip } from "@base-ui/react/tooltip";
 
 interface TipProps {
-  label: React.ReactNode;
+  /** Tooltip text. Optional — omit for kbd-only tooltips on buttons that
+   *  already have a visible label (e.g. the primary Reply / Comment). */
+  label?: React.ReactNode;
   /** Keyboard shortcut, one key per <kbd>. e.g. ["⌘", "Enter"]. */
   kbd?: string[];
   /** The trigger element. Receives Tooltip.Trigger's props via `render`. */
@@ -33,7 +35,7 @@ export function Tip({
       <Tooltip.Portal>
         <Tooltip.Positioner side={side} sideOffset={sideOffset}>
           <Tooltip.Popup className="tooltip">
-            <span className="tooltip-label">{label}</span>
+            {label && <span className="tooltip-label">{label}</span>}
             {kbd && kbd.length > 0 && (
               <span className="tooltip-kbds">
                 {kbd.map((k, i) => (
