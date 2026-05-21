@@ -27,6 +27,7 @@ import { useMemo, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { Drawer } from "@base-ui/react/drawer";
 import { X, MessageSquareText, ChevronLeft } from "lucide-react";
+import { Button } from "@base-ui/react/button";
 import { Tip } from "./Tip";
 import {
   annotationsAtom,
@@ -205,15 +206,14 @@ function ListBody({
       ))}
       {resolved.length > 0 && (
         <>
-          <button
-            type="button"
+          <Button
             className={`section-label ${resolvedExpanded ? "" : "collapsed"}`}
             onClick={() => setResolvedExpanded((v) => !v)}
           >
             <span className="caret">▾</span>
             <span>Resolved</span>
             <span className="count">· {resolved.length}</span>
-          </button>
+          </Button>
           {resolvedExpanded &&
             resolved.map((a) => <ChipCard key={a.id} annotation={a} />)}
         </>
@@ -297,8 +297,7 @@ function OrphansDrawer({ orphans }: { orphans: Annotation[] }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="orphans-drawer">
-      <button
-        type="button"
+      <Button
         className={`orphans-toggle ${open ? "" : "collapsed"}`}
         onClick={() => setOpen((o) => !o)}
         title="These annotations point at text that's no longer in the document."
@@ -306,7 +305,7 @@ function OrphansDrawer({ orphans }: { orphans: Annotation[] }) {
         <span className="caret">▾</span>
         <span>Orphaned</span>
         <span className="count">· {orphans.length}</span>
-      </button>
+      </Button>
       {open && (
         <Scroll className="orphans-list">
           {orphans.map((a) => (

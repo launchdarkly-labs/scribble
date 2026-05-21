@@ -15,6 +15,7 @@
  */
 import { useEffect, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
+import { Button } from "@base-ui/react/button";
 import {
   iframeElAtom,
   draftRangeAtom,
@@ -72,8 +73,7 @@ export function SelectionPill() {
   };
 
   return (
-    <button
-      type="button"
+    <Button
       className="pill"
       style={style}
       // pointerdown so the iframe selection is still alive when we read it
@@ -90,6 +90,6 @@ export function SelectionPill() {
     >
       <span>Comment</span>
       <span className="kbd">⌘K</span>
-    </button>
+    </Button>
   );
 }

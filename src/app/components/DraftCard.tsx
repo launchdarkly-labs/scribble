@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { X, Send } from "lucide-react";
+import { Button } from "@base-ui/react/button";
 import {
   draftRangeAtom,
   humanAuthorAtom,
@@ -87,25 +88,23 @@ export function DraftCard() {
       <div className="card-actions">
         <div className="card-buttons">
           <Tip label="Cancel" kbd={["Esc"]}>
-            <button
-              type="button"
+            <Button
               className="icon-btn"
               onClick={() => setDraftRange(null)}
               aria-label="Cancel"
             >
               <X size={16} />
-            </button>
+            </Button>
           </Tip>
           <Tip kbd={["⌘", "Enter"]}>
-            <button
-              type="button"
+            <Button
               className="btn"
               disabled={!body.trim() || submitting}
               onClick={submit}
             >
               <Send size={14} />
               <span>Comment</span>
-            </button>
+            </Button>
           </Tip>
         </div>
       </div>

@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { Trash2, Check, Undo2, Send } from "lucide-react";
+import { Button } from "@base-ui/react/button";
 import { activeIdAtom, humanAuthorAtom } from "../atoms";
 import { Tip } from "./Tip";
 import {
@@ -125,51 +126,47 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
       <div className="card-actions">
         <div className="card-buttons">
           <Tip label="Delete annotation">
-            <button
-              type="button"
+            <Button
               className="icon-btn danger"
               onClick={remove}
               disabled={submitting}
               aria-label="Delete annotation"
             >
               <Trash2 size={16} />
-            </button>
+            </Button>
           </Tip>
           {ann.status === "open" ? (
             <Tip label="Resolve" kbd={["⌘", "⇧", "Enter"]}>
-              <button
-                type="button"
+              <Button
                 className="icon-btn"
                 onClick={resolveWith}
                 disabled={submitting}
                 aria-label="Resolve"
               >
                 <Check size={17} />
-              </button>
+              </Button>
             </Tip>
           ) : (
             <Tip label="Reopen">
-              <button
-                type="button"
+              <Button
                 className="icon-btn"
                 onClick={reopen}
                 disabled={submitting}
                 aria-label="Reopen"
               >
                 <Undo2 size={16} />
-              </button>
+              </Button>
             </Tip>
           )}
           <Tip kbd={["⌘", "Enter"]}>
-            <button
-              type="button"
+            <Button
               className="btn"
               onClick={submitReply}
               disabled={!reply.trim() || submitting}
             >
               <Send size={14} />
               <span>Reply</span>
-            </button>
+            </Button>
           </Tip>
         </div>
       </div>
