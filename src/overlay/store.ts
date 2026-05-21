@@ -6,7 +6,7 @@
  * optimistic updates in v0 — the round-trip on localhost is too fast for it
  * to matter and we avoid reconciliation bugs.
  */
-import { signal, computed } from "@preact/signals-react";
+import { signal, computed, effect } from "@preact/signals-react";
 import type { Annotation, Author, Selector, WsMessage } from "@/shared/types";
 
 /**
@@ -36,6 +36,21 @@ export const hoverId = signal<string | null>(null);
 export const draftRange = signal<Range | null>(null);
 export const connected = signal(false);
 /**
+ * Collapsed/expanded state for the right-edge annotation track.
+ *
+ * Closed = a narrow "rail" with the open count and an expand button.
+ * Open  = full 360px column with chips and the active thread.
+ *
+ * Initial state is false; the first WS snapshot bumps it to true iff the
+ * doc has any annotations (the (b) default — fresh docs feel uncluttered,
+ * docs with prior review come back with the column already there). After
+ * that, the user owns it via the rail/close buttons; the only automatic
+ * opens are explicit interactions (pill click, highlight click, hash
+ * deep-link, agent-authored question arriving via WS) which are wired up
+ * by the `auto-open` effect below.
+ */
+export const trackOpen = signal<boolean>(false);
+/**
  * Guarded "show the thread card" flag, valued as the id it applies to.
  *
  * Set by the dialog coordinator (src/overlay/dialog-coordinator.ts) when
@@ -62,6 +77,19 @@ export const unresolved = computed(() =>
 export const activeAnnotation = computed(() =>
   annotations.value.find((a) => a.id === activeId.value) ?? null,
 );
+
+/**
+ * Whenever something happens that *needs* the track to be visible (the
+ * user activated an annotation, started a draft, etc.), open it. We
+ * never auto-close — once the user has closed it, only an explicit
+ * interaction reopens. activeId being cleared is treated as a no-op, not
+ * a signal to close.
+ */
+effect(() => {
+  if (activeId.value || draftRange.value) trackOpen.value = true;
+});
+
+let snapshotSeen = false;
 
 function upsert(list: Annotation[], next: Annotation): Annotation[] {
   const i = list.findIndex((a) => a.id === next.id);
@@ -91,6 +119,13 @@ export function connect() {
     }
     if (msg.type === "snapshot") {
       annotations.value = msg.annotations;
+      // (b) default: open the track on first snapshot iff the doc already
+      // has annotations. Subsequent snapshots (after reconnect) don't
+      // override whatever state the user has chosen since.
+      if (!snapshotSeen) {
+        snapshotSeen = true;
+        if (msg.annotations.length > 0) trackOpen.value = true;
+      }
     } else if (msg.type === "upsert") {
       const isNew = !annotations.value.some((a) => a.id === msg.annotation.id);
       annotations.value = upsert(annotations.value, msg.annotation);

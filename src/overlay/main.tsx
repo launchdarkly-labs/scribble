@@ -9,9 +9,10 @@
  */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { effect } from "@preact/signals-react";
 import { Track } from "./components/Track";
 import { SelectionPill } from "./components/SelectionPill";
-import { connect, draftRange, activeId, hoverId, annotations } from "./store";
+import { connect, draftRange, activeId, hoverId, annotations, trackOpen } from "./store";
 import { startHighlightSync, annotationAt } from "./highlights";
 import { startHashSync } from "./hash-sync";
 import { startDialogCoordinator } from "./dialog-coordinator";
@@ -78,8 +79,19 @@ html {
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
-/* Make room for the annotation track so it doesn't overlap content. */
-body { padding-right: 360px; }
+/* Make room for the annotation track so it doesn't overlap content.
+   Two states: "closed" reserves space for the narrow rail; "open"
+   reserves space for the full column. Transitioned so the doc reflows
+   smoothly when the user toggles. The data attribute is owned by the
+   trackOpen effect in main.tsx — don't set it from CSS-only rules. */
+body {
+  padding-right: 32px;
+  transition: padding-right 0.18s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
+}
+body[data-scribble-track="open"] { padding-right: 360px; }
 `;
 
 function bootstrap() {
@@ -88,6 +100,16 @@ function bootstrap() {
   hostStyle.setAttribute("data-scribble", "host");
   hostStyle.textContent = HOST_STYLES;
   document.head.appendChild(hostStyle);
+
+  // Mirror the trackOpen signal onto a body data attribute, which the
+  // host CSS reads to size body padding-right. Done as a single effect
+  // so React components don't have to touch document.body directly.
+  effect(() => {
+    document.body.setAttribute(
+      "data-scribble-track",
+      trackOpen.value ? "open" : "closed",
+    );
+  });
 
   // Build shadow root
   const host = document.getElementById("scribble-root");

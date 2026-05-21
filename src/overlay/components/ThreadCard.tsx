@@ -17,6 +17,7 @@ import {
 } from "../store";
 import type { Annotation, Author } from "@/shared/types";
 import { authorLabel } from "@/shared/types";
+import { Scroll } from "./Scroll";
 
 export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
   const [reply, setReply] = useState("");
@@ -90,7 +91,7 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
         }
       }}
     >
-      <div className="thread">
+      <Scroll className="thread">
         <ThreadMessage
           author={ann.author}
           body={ann.body.value}
@@ -104,7 +105,7 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
             created={r.created}
           />
         ))}
-      </div>
+      </Scroll>
       <div className="thread-divider" />
       <div className="card-body">
         <textarea

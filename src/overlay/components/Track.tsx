@@ -51,6 +51,7 @@ import {
   unresolved,
   orphanedIds,
   showThreadForId,
+  trackOpen,
 } from "../store";
 import { locate } from "../anchoring";
 import type { Annotation } from "@/shared/types";
@@ -58,6 +59,8 @@ import { authorLabel } from "@/shared/types";
 import { ThreadCard } from "./ThreadCard";
 import { DraftCard } from "./DraftCard";
 import { ChipCard } from "./ChipCard";
+import { Rail } from "./Rail";
+import { Scroll } from "./Scroll";
 
 // Layout constants. Keep in sync with .card max-heights in overlay.css.
 // HEADER_H is used to convert viewport-relative anchor rects (from
@@ -82,11 +85,17 @@ type Item =
 
 export function Track() {
   useSignals();
+  const open = trackOpen.value;
   const all = annotations.value;
   const aid = activeId.value;
   const showId = showThreadForId.value;
   const orphanSet = orphanedIds.value;
   const draft = draftRange.value;
+
+  // Collapsed: just render the rail. The layout solver and friends do
+  // nothing useful in this state, and avoiding them keeps scroll-frame
+  // work minimal when the user is reading without commenting.
+  if (!open) return <Rail />;
 
   // Re-render on scroll/resize, rAF-throttled, so anchored positions stay
   // glued to their targets as the user scrolls the host doc.
@@ -179,6 +188,17 @@ export function Track() {
           <span className={`dot ${connected.value ? "live" : ""}`} />
           {unresolved.value.length} open
         </span>
+        <button
+          type="button"
+          className="track-close"
+          title="Collapse to rail"
+          aria-label="Collapse to rail"
+          onClick={() => {
+            trackOpen.value = false;
+          }}
+        >
+          ›
+        </button>
       </header>
       <div className="track-body">
         {all.length === 0 && !draft && (
@@ -286,11 +306,11 @@ function OrphansDrawer({ orphans }: { orphans: Annotation[] }) {
         <span className="count">· {orphans.length}</span>
       </button>
       {open && (
-        <div className="orphans-list">
+        <Scroll className="orphans-list">
           {orphans.map((a) => (
             <OrphanItem key={a.id} ann={a} />
           ))}
-        </div>
+        </Scroll>
       )}
     </div>
   );
