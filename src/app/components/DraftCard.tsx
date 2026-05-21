@@ -16,6 +16,7 @@ import {
   humanAuthorAtom,
   iframeElAtom,
 } from "../atoms";
+import { Tip } from "./Tip";
 import { describeRange } from "../anchoring";
 import { createAnnotation } from "../api";
 
@@ -84,27 +85,32 @@ export function DraftCard() {
         />
       </div>
       <div className="card-actions">
-        <span className="card-hint" title="⌘↩ comment  ·  esc cancel">
-          <kbd>⌘↩</kbd>
+        <span className="card-hint">
+          <kbd>⌘</kbd>
+          <kbd>Enter</kbd>
+          <span>comment</span>
+          <span className="sep">·</span>
+          <kbd>Esc</kbd>
+          <span>cancel</span>
         </span>
         <div className="card-buttons">
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={() => setDraftRange(null)}
-            title="Cancel (esc)"
-            aria-label="Cancel"
-          >
-            <X size={16} />
-          </button>
+          <Tip label="Cancel" kbd={["Esc"]}>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => setDraftRange(null)}
+              aria-label="Cancel"
+            >
+              <X size={16} />
+            </button>
+          </Tip>
           <button
             type="button"
             className="btn"
             disabled={!body.trim() || submitting}
             onClick={submit}
-            title="⌘↩ to send"
           >
-            <Send size={13} />
+            <Send size={14} />
             <span>Comment</span>
           </button>
         </div>

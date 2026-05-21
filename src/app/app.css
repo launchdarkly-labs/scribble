@@ -222,7 +222,8 @@ body {
   border-left: 1px solid var(--rule);
   box-shadow: var(--shadow);
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: 16px;
+  line-height: 1.45;
   color: var(--ink);
   display: flex;
   flex-direction: column;
@@ -255,11 +256,11 @@ body {
 .track-title {
   font-weight: 600;
   letter-spacing: -0.01em;
-  font-size: 13px;
+  font-size: 15px;
   flex: 1 1 auto;
 }
 .track-status {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .track-status .dot {
@@ -412,7 +413,7 @@ body {
 }
 
 .chip-body {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.4;
   color: var(--ink);
   white-space: pre-wrap;
@@ -474,6 +475,8 @@ body {
   border-radius: 6px;
   padding: 8px 10px;
   font: inherit;
+  font-size: 15px;
+  line-height: 1.45;
   color: inherit;
   background: var(--surface);
   resize: none;
@@ -498,22 +501,35 @@ body {
   gap: 8px;
   padding: 6px 10px 8px;
 }
+/* Card-actions inline hint: keys live as individual <kbd> badges with
+   small connective words between (e.g. "⌘ Enter reply · ⌘ ⇧ Enter
+   resolve"). Matches the Linear-style chip look the user pointed at. */
 .card-hint {
-  font-size: 11px;
-  color: var(--faint);
-  white-space: nowrap;
+  font-size: 13px;
+  color: var(--muted);
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  flex-wrap: wrap;
 }
-.card-hint kbd {
+.card-hint .sep {
+  color: var(--faint);
+  margin: 0 2px;
+}
+.card-hint kbd,
+.tooltip-kbds kbd {
   font-family: var(--font-ui);
-  font-size: 10px;
-  padding: 1px 4px;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 6px;
   border: 1px solid var(--rule);
-  border-radius: 3px;
-  background: var(--surface);
-  color: var(--muted);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--ink);
+  min-width: 22px;
+  text-align: center;
+  display: inline-block;
 }
 .card-buttons {
   display: flex;
@@ -561,9 +577,9 @@ body {
   background: var(--ink);
   color: var(--bg);
   border: none;
-  border-radius: 5px;
-  padding: 5px 10px;
-  font: 600 12px/1.2 var(--font-ui);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font: 600 14px/1.2 var(--font-ui);
   cursor: pointer;
   white-space: nowrap;
   display: inline-flex;
@@ -640,7 +656,7 @@ body {
   font-size: 10.5px;
 }
 .thread-message-body {
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
   color: var(--ink);
   white-space: pre-wrap;
@@ -766,4 +782,53 @@ body {
 }
 .scroll-thumb:hover {
   background: oklch(from var(--muted) l c h / 0.7);
+}
+
+/* ─────────────────────────  Tooltip  ────────────────────── */
+
+.tooltip {
+  background: var(--ink);
+  color: var(--bg);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font: 13px/1.3 var(--font-ui);
+  box-shadow: var(--shadow);
+  max-width: 260px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity 0.12s, transform 0.12s;
+  transform: scale(0.97);
+  transform-origin: center;
+  pointer-events: none;
+}
+.tooltip[data-open] {
+  opacity: 1;
+  transform: scale(1);
+}
+.tooltip[data-starting-style] {
+  opacity: 0;
+  transform: scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tooltip {
+    transition: none;
+  }
+}
+
+.tooltip-label {
+  white-space: nowrap;
+}
+.tooltip-kbds {
+  display: inline-flex;
+  gap: 3px;
+}
+.tooltip-kbds kbd {
+  /* Override the .card-hint kbd theme — inside a dark tooltip, kbds use
+     a translucent light fill instead of the page background. */
+  background: oklch(from var(--bg) l c h / 0.18);
+  border-color: oklch(from var(--bg) l c h / 0.25);
+  color: var(--bg);
 }

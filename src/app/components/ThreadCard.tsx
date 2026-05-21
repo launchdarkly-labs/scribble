@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { Trash2, Check, Undo2, Send } from "lucide-react";
 import { activeIdAtom, humanAuthorAtom } from "../atoms";
+import { Tip } from "./Tip";
 import {
   replyToAnnotation,
   resolveAnnotation,
@@ -122,51 +123,60 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
         />
       </div>
       <div className="card-actions">
-        <span className="card-hint" title="⌘↩ reply  ·  ⌘⇧↩ resolve">
-          <kbd>⌘↩</kbd>
+        <span className="card-hint">
+          <kbd>⌘</kbd>
+          <kbd>Enter</kbd>
+          <span>reply</span>
+          <span className="sep">·</span>
+          <kbd>⌘</kbd>
+          <kbd>⇧</kbd>
+          <kbd>Enter</kbd>
+          <span>resolve</span>
         </span>
         <div className="card-buttons">
-          <button
-            type="button"
-            className="icon-btn danger"
-            onClick={remove}
-            disabled={submitting}
-            title="Delete annotation"
-            aria-label="Delete annotation"
-          >
-            <Trash2 size={15} />
-          </button>
+          <Tip label="Delete annotation">
+            <button
+              type="button"
+              className="icon-btn danger"
+              onClick={remove}
+              disabled={submitting}
+              aria-label="Delete annotation"
+            >
+              <Trash2 size={16} />
+            </button>
+          </Tip>
           {ann.status === "open" ? (
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={resolveWith}
-              disabled={submitting}
-              title="Resolve"
-              aria-label="Resolve"
-            >
-              <Check size={16} />
-            </button>
+            <Tip label="Resolve" kbd={["⌘", "⇧", "Enter"]}>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={resolveWith}
+                disabled={submitting}
+                aria-label="Resolve"
+              >
+                <Check size={17} />
+              </button>
+            </Tip>
           ) : (
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={reopen}
-              disabled={submitting}
-              title="Reopen"
-              aria-label="Reopen"
-            >
-              <Undo2 size={15} />
-            </button>
+            <Tip label="Reopen">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={reopen}
+                disabled={submitting}
+                aria-label="Reopen"
+              >
+                <Undo2 size={16} />
+              </button>
+            </Tip>
           )}
           <button
             type="button"
             className="btn"
             onClick={submitReply}
             disabled={!reply.trim() || submitting}
-            title="⌘↩ to send"
           >
-            <Send size={13} />
+            <Send size={14} />
             <span>Reply</span>
           </button>
         </div>

@@ -7,6 +7,7 @@
  * width driven by the `data-track` attribute on the root element. The
  * track itself just fills that grid cell.
  */
+import { Tooltip } from "@base-ui/react/tooltip";
 import { IframeDoc } from "./IframeDoc";
 import { SelectionPill } from "./components/SelectionPill";
 import { Track } from "./components/Track";
@@ -18,15 +19,17 @@ import { ActivationScroller } from "./ActivationScroller";
 
 export function App() {
   return (
-    <div className="app">
-      <IframeDoc />
-      <Track />
-      <SelectionPill />
-      <WebSocketBridge />
-      <HashSync />
-      <KeyboardShortcuts />
-      <HighlightSync />
-      <ActivationScroller />
-    </div>
+    <Tooltip.Provider delay={400} closeDelay={0}>
+      <div className="app">
+        <IframeDoc />
+        <Track />
+        <SelectionPill />
+        <WebSocketBridge />
+        <HashSync />
+        <KeyboardShortcuts />
+        <HighlightSync />
+        <ActivationScroller />
+      </div>
+    </Tooltip.Provider>
   );
 }

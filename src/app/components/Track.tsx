@@ -27,6 +27,7 @@ import { useMemo, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { Drawer } from "@base-ui/react/drawer";
 import { X, MessageSquareText, ChevronLeft } from "lucide-react";
+import { Tip } from "./Tip";
 import {
   annotationsAtom,
   activeIdAtom,
@@ -108,13 +109,14 @@ export function Track() {
                 <span className={`dot ${connected ? "live" : ""}`} />
                 {unresolvedCount} open
               </span>
-              <Drawer.Close
-                className="icon-btn"
-                aria-label="Collapse to rail"
-                title="Collapse to rail"
-              >
-                <X size={16} />
-              </Drawer.Close>
+              <Tip label="Collapse to rail">
+                <Drawer.Close
+                  className="icon-btn"
+                  aria-label="Collapse to rail"
+                >
+                  <X size={16} />
+                </Drawer.Close>
+              </Tip>
             </header>
             {focused ? (
               <FocusBody ann={activeAnn} draft={draft} />
