@@ -1,30 +1,31 @@
 /**
- * Right-column annotation UI. Three states:
+ * Right-column annotation UI, built on base-ui's Drawer in non-modal,
+ * slide-over mode. The Drawer owns open/close state and animation; we
+ * just bind its `open` to `trackOpenAtom` and its `onOpenChange` to a
+ * handler that also clears any focus state.
  *
- *   • Rail        — collapsed; narrow strip + count + chevron.
- *   • List mode   — open, no activation. All non-orphan annotations as
- *                   chips, sorted by document position. Use to browse.
- *   • Focus mode  — open, with an `activeId` or `draftRange`. A single
- *                   card pinned to its anchor's spatial position in the
- *                   track. Use to read and respond.
+ * Shape:
+ *   • Drawer.Trigger    Always-visible rail in the grid's right column.
+ *                       Click → expands the popup.
+ *   • Drawer.Popup      The actual track. Slides over the rail (and a
+ *                       slice of the iframe) when open. Non-modal so the
+ *                       user can still interact with the doc behind it.
+ *   • Drawer.Close      Wired into the header ✕; closes via the same
+ *                       onOpenChange path.
  *
- * Transitions:
- *   List   → Focus  click a chip / click an in-doc highlight /
- *                   start a draft / hash deep-link / agent question
- *                   arrives via WS.
- *   Focus  → List   Esc, click the track background, click outside the
- *                   active anchor in the doc, or scroll the anchor far
- *                   enough out of view (ActivationScroller's IO grace).
- *   Either → Rail   click ✕ in the track header.
- *   Rail   → ?      click the rail; lands in List (no activation) or
- *                   Focus (if there happens to be an activeId/draft).
+ * Inside the popup we still have two modes — List and Focus — driven
+ * by whether anything is activated. See ListBody / FocusBody below.
  *
- * Sorting in List mode uses TextPositionSelector.start (a stable text
- * offset) rather than getBoundingClientRect, so it doesn't depend on
- * the iframe doc being loaded yet and doesn't churn on scroll.
+ * Why a Drawer instead of conditional render of Rail/Track? Because
+ *   (a) the open/close state machine + animations + a11y come for free,
+ *   (b) the close button is genuinely a Drawer.Close and can't be
+ *       defeated by an outside effect (no inference loop), and
+ *   (c) the slide-over pattern is what we actually want (no iframe
+ *       reflow on toggle, just a panel sliding in).
  */
 import { useMemo, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
+import { Drawer } from "@base-ui/react/drawer";
 import {
   annotationsAtom,
   activeIdAtom,
@@ -42,10 +43,9 @@ import { authorLabel } from "@/shared/types";
 import { ThreadCard } from "./ThreadCard";
 import { DraftCard } from "./DraftCard";
 import { ChipCard } from "./ChipCard";
-import { Rail } from "./Rail";
 import { Scroll } from "./Scroll";
 
-// Spatial constants for focus mode. Keep in sync with .card max-heights.
+// Layout constants. Keep in sync with .card max-heights in app.css.
 const HEADER_H = 48;
 const TRACK_PAD_TOP = 8;
 const GAP = 8;
@@ -71,61 +71,98 @@ export function Track() {
   const unresolvedCount = useAtomValue(unresolvedAtom).length;
   const connected = useAtomValue(connectedAtom);
 
-  // Closing the track also drops any active focus. Otherwise we'd be
-  // in a weird "closed, but a thread is selected" state — and on the
-  // user's next interaction AutoOpenTrack might spring the column back
-  // open uninvited.
-  const closeTrack = () => {
-    if (aid) setActive(null);
-    if (draft) setDraft(null);
-    setOpen(false);
-  };
-
-  if (!open) return <Rail />;
-
   const activeAnn = aid ? all.find((a) => a.id === aid) ?? null : null;
   const focused = !!(activeAnn || draft);
   const orphans = all.filter((a) => orphanSet.has(a.id));
 
+  // Single source of truth for "should be open." When closing, also
+  // clear focus state so we don't return to a zombie "closed but
+  // selected" state next time the rail is clicked.
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      if (aid) setActive(null);
+      if (draft) setDraft(null);
+    }
+    setOpen(next);
+  };
+
   return (
-    <aside
-      className="track"
-      onClick={(e) => {
-        // Click on track chrome (background, header) in focus mode →
-        // exit to list. List mode background clicks are a no-op.
-        const t = e.target as Element | null;
-        if (focused && !t?.closest?.(".track-slot, .orphans-drawer, button")) {
-          if (aid) setActive(null);
-        }
-      }}
+    <Drawer.Root
+      open={open}
+      onOpenChange={handleOpenChange}
+      modal={false}
+      // Outside clicks must NOT dismiss — the user clicks doc text all
+      // the time and that shouldn't close the panel.
+      disablePointerDismissal
     >
-      <header className="track-header">
-        <span className="track-title">Scribble</span>
-        <span className="track-status">
-          <span className={`dot ${connected ? "live" : ""}`} />
-          {unresolvedCount} open
-        </span>
-        <button
-          type="button"
-          className="track-close"
-          title="Collapse to rail"
-          aria-label="Collapse to rail"
-          onClick={closeTrack}
-        >
-          ›
-        </button>
-      </header>
-      {focused ? (
-        <FocusBody ann={activeAnn} draft={draft} />
-      ) : (
-        <ListBody
-          annotations={all}
-          orphanSet={orphanSet}
-          unresolvedCount={unresolvedCount}
+      <Drawer.Trigger className="rail" aria-label="Open scribble">
+        <RailContent count={unresolvedCount} connected={connected} />
+      </Drawer.Trigger>
+      <Drawer.Portal>
+        <Drawer.Viewport className="drawer-viewport">
+          <Drawer.Popup className="track-popup">
+            <header className="track-header">
+              <Drawer.Title className="track-title">Scribble</Drawer.Title>
+              <span className="track-status">
+                <span className={`dot ${connected ? "live" : ""}`} />
+                {unresolvedCount} open
+              </span>
+              <Drawer.Close
+                className="track-close"
+                aria-label="Collapse to rail"
+                title="Collapse to rail"
+              >
+                ›
+              </Drawer.Close>
+            </header>
+            {focused ? (
+              <FocusBody ann={activeAnn} draft={draft} />
+            ) : (
+              <ListBody annotations={all} orphanSet={orphanSet} />
+            )}
+            {orphans.length > 0 && <OrphansDrawer orphans={orphans} />}
+          </Drawer.Popup>
+        </Drawer.Viewport>
+      </Drawer.Portal>
+    </Drawer.Root>
+  );
+}
+
+/* ───────────────  Rail (trigger content)  ─────────────── */
+
+function RailContent({
+  count,
+  connected,
+}: {
+  count: number;
+  connected: boolean;
+}) {
+  return (
+    <>
+      <div className="rail-top">
+        <span
+          className={`dot ${connected ? "live" : ""}`}
+          aria-hidden="true"
         />
-      )}
-      {orphans.length > 0 && <OrphansDrawer orphans={orphans} />}
-    </aside>
+        <svg
+          className="rail-icon"
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.75}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-5.5A8 8 0 1 1 21 12z" />
+        </svg>
+        {count > 0 && <span className="rail-count">{count}</span>}
+      </div>
+      <div className="rail-wordmark">Scribble</div>
+      <div className="rail-chev" aria-hidden="true">
+        ‹
+      </div>
+    </>
   );
 }
 
@@ -134,17 +171,12 @@ export function Track() {
 function ListBody({
   annotations,
   orphanSet,
-  unresolvedCount,
 }: {
   annotations: Annotation[];
   orphanSet: Set<string>;
-  unresolvedCount: number;
 }) {
   const [resolvedExpanded, setResolvedExpanded] = useState(false);
 
-  // Sort once per annotations change; TextPositionSelector.start is the
-  // stable text offset (server-side authored), so this doesn't depend
-  // on the iframe doc being loaded.
   const { open, resolved } = useMemo(() => {
     const sorted = [...annotations].sort(
       (a, b) =>
@@ -190,10 +222,8 @@ function ListBody({
             resolved.map((a) => <ChipCard key={a.id} annotation={a} />)}
         </>
       )}
-      {unresolvedCount === 0 && resolved.length > 0 && !resolvedExpanded && (
-        <div className="track-empty-soft">
-          All open threads resolved. ✓
-        </div>
+      {open.length === 0 && resolved.length > 0 && !resolvedExpanded && (
+        <div className="track-empty-soft">All open threads resolved. ✓</div>
       )}
     </Scroll>
   );
@@ -208,7 +238,6 @@ function FocusBody({
   ann: Annotation | null;
   draft: Range | null;
 }) {
-  // Subscribe to docTick so the focused card follows iframe scroll.
   useAtomValue(docTickAtom);
   const iframe = useAtomValue(iframeElAtom);
   const doc = iframe?.contentDocument ?? null;
@@ -239,8 +268,6 @@ function FocusBody({
     });
   }
 
-  // Resolve collisions (relevant only when both active and draft are
-  // open and their anchors are close together).
   items.sort((a, b) => a.top - b.top);
   let cursor = TRACK_PAD_TOP;
   const laid = items.map((it) => {

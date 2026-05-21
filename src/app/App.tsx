@@ -7,8 +7,6 @@
  * width driven by the `data-track` attribute on the root element. The
  * track itself just fills that grid cell.
  */
-import { useAtomValue } from "@effect-atom/atom-react";
-import { trackOpenAtom } from "./atoms";
 import { IframeDoc } from "./IframeDoc";
 import { SelectionPill } from "./components/SelectionPill";
 import { Track } from "./components/Track";
@@ -19,9 +17,8 @@ import { HighlightSync } from "./HighlightSync";
 import { ActivationScroller } from "./ActivationScroller";
 
 export function App() {
-  const open = useAtomValue(trackOpenAtom);
   return (
-    <div className="app" data-track={open ? "open" : "closed"}>
+    <div className="app">
       <IframeDoc />
       <Track />
       <SelectionPill />

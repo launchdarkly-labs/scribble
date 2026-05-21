@@ -120,8 +120,12 @@ body {
 
 /* ─────────────────────────  Rail (collapsed track)  ───────────────── */
 
+/* The rail is rendered as a <button> by Drawer.Trigger. Reset button
+   defaults and stretch to fill the right grid cell. */
 .rail {
+  appearance: none;
   background: var(--surface);
+  border: none;
   border-left: 1px solid var(--rule);
   color: var(--muted);
   cursor: pointer;
@@ -133,6 +137,7 @@ body {
   transition: background 0.12s, color 0.12s;
   font-family: var(--font-ui);
   height: 100%;
+  width: 100%;
 }
 .rail:hover {
   color: var(--ink);
@@ -197,16 +202,44 @@ body {
 
 /* ─────────────────────────────  Track  ────────────────────────────── */
 
-.track {
+/* base-ui Drawer popup. Portaled to document.body via Drawer.Portal,
+   then positioned by Drawer.Viewport at the right edge of the screen.
+   Slides over the rail and a slice of the iframe — doesn't push them. */
+.drawer-viewport {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none; /* clicks through to doc unless on popup */
+  z-index: 100;
+}
+
+.track-popup {
+  pointer-events: auto;
+  height: 100%;
+  width: 360px;
   background: var(--surface);
   border-left: 1px solid var(--rule);
+  box-shadow: var(--shadow);
   font-family: var(--font-ui);
   font-size: 13px;
   color: var(--ink);
   display: flex;
   flex-direction: column;
-  height: 100%;
   overflow: hidden;
+  outline: none;
+  /* base-ui adds data-starting-style during enter and data-ending-style
+     during leave; we hook the slide-from-right transform onto those. */
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.track-popup[data-starting-style],
+.track-popup[data-ending-style] {
+  transform: translateX(100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .track-popup {
+    transition: none;
+  }
 }
 
 .track-header {
