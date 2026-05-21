@@ -10,6 +10,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
+import { X, Send } from "../icons";
 import {
   draftRangeAtom,
   humanAuthorAtom,
@@ -83,24 +84,28 @@ export function DraftCard() {
         />
       </div>
       <div className="card-actions">
-        <span className="card-hint">
-          <kbd>⌘↩</kbd> comment · <kbd>esc</kbd> cancel
+        <span className="card-hint" title="⌘↩ comment  ·  esc cancel">
+          <kbd>⌘↩</kbd>
         </span>
         <div className="card-buttons">
           <button
             type="button"
-            className="btn ghost"
+            className="icon-btn"
             onClick={() => setDraftRange(null)}
+            title="Cancel (esc)"
+            aria-label="Cancel"
           >
-            Cancel
+            <X size={16} />
           </button>
           <button
             type="button"
             className="btn"
             disabled={!body.trim() || submitting}
             onClick={submit}
+            title="⌘↩ to send"
           >
-            Comment
+            <Send size={13} />
+            <span>Comment</span>
           </button>
         </div>
       </div>

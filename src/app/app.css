@@ -217,7 +217,7 @@ body {
 .track-popup {
   pointer-events: auto;
   height: 100%;
-  width: 360px;
+  width: 400px;
   background: var(--surface);
   border-left: 1px solid var(--rule);
   box-shadow: var(--shadow);
@@ -496,12 +496,15 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px 8px;
+  padding: 6px 10px 8px;
 }
 .card-hint {
   font-size: 11px;
   color: var(--faint);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .card-hint kbd {
   font-family: var(--font-ui);
@@ -514,8 +517,44 @@ body {
 }
 .card-buttons {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
+}
+
+/* Square icon-only buttons. Used for secondary actions (delete,
+   resolve, reopen, cancel) and the track close. Tooltip via the
+   native `title` attribute on the button. */
+.icon-btn {
+  appearance: none;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-radius: 5px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.1s, color 0.1s;
+}
+.icon-btn:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--ink);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.icon-btn.danger:hover:not(:disabled) {
+  color: oklch(60% 0.18 25);
+  background: oklch(96% 0.02 25);
+}
+@media (prefers-color-scheme: dark) {
+  .icon-btn.danger:hover:not(:disabled) {
+    background: oklch(28% 0.04 25);
+  }
 }
 
 .btn {
@@ -527,6 +566,12 @@ body {
   font: 600 12px/1.2 var(--font-ui);
   cursor: pointer;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn svg {
+  display: block;
 }
 .btn:hover:not(:disabled) {
   background: oklch(from var(--ink) calc(l + 0.06) c h);

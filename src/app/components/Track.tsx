@@ -26,6 +26,7 @@
 import { useMemo, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { Drawer } from "@base-ui/react/drawer";
+import { X, MessageSquareText, ChevronLeftThin } from "../icons";
 import {
   annotationsAtom,
   activeIdAtom,
@@ -108,11 +109,11 @@ export function Track() {
                 {unresolvedCount} open
               </span>
               <Drawer.Close
-                className="track-close"
+                className="icon-btn"
                 aria-label="Collapse to rail"
                 title="Collapse to rail"
               >
-                ›
+                <X size={16} />
               </Drawer.Close>
             </header>
             {focused ? (
@@ -144,27 +145,20 @@ function RailContent({
           className={`dot ${connected ? "live" : ""}`}
           aria-hidden="true"
         />
-        <svg
+        <MessageSquareText
           className="rail-icon"
+          size={16}
           aria-hidden="true"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.75}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-5.5A8 8 0 1 1 21 12z" />
-        </svg>
+        />
         {count > 0 && <span className="rail-count">{count}</span>}
       </div>
       <div className="rail-wordmark">Scribble</div>
-      <div className="rail-chev" aria-hidden="true">
-        ‹
-      </div>
+      <ChevronLeftThin className="rail-chev" />
     </>
   );
 }
+
+
 
 /* ───────────────  List mode  ─────────────── */
 
