@@ -76,12 +76,14 @@ function openBrowser(url: string) {
  *
  * The spawn command mirrors how we were invoked: in dev that's
  * `[bun, src/cli.ts, ...]`, in a compiled binary it's `[<binary>, ...]`.
- * We forward argv minus `--detach`, ensuring `--no-open` is set so the
- * detached daemon doesn't pop a browser tab the agent didn't ask for.
+ * We forward argv minus `--detach`. Browser-open behavior is inherited
+ * from the args: `--detach` *does* pop a tab by default, because the only
+ * caller in practice is the skill flow ("I bootstrapped a session for you
+ * to review"), and in that flow the user always wants the browser. Pass
+ * `--no-open` explicitly for genuinely-headless automation.
  */
 async function openDetached(args: string[]) {
   const childArgs = process.argv.slice(1).filter((a) => a !== "--detach");
-  if (!childArgs.includes("--no-open")) childArgs.push("--no-open");
 
   const child = Bun.spawn([process.execPath, ...childArgs], {
     stdin: "ignore",
