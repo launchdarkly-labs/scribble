@@ -67,8 +67,19 @@ export function Track() {
   const setActive = useAtomSet(activeIdAtom);
   const orphanSet = useAtomValue(orphanedIdsAtom);
   const draft = useAtomValue(draftRangeAtom);
+  const setDraft = useAtomSet(draftRangeAtom);
   const unresolvedCount = useAtomValue(unresolvedAtom).length;
   const connected = useAtomValue(connectedAtom);
+
+  // Closing the track also drops any active focus. Otherwise we'd be
+  // in a weird "closed, but a thread is selected" state — and on the
+  // user's next interaction AutoOpenTrack might spring the column back
+  // open uninvited.
+  const closeTrack = () => {
+    if (aid) setActive(null);
+    if (draft) setDraft(null);
+    setOpen(false);
+  };
 
   if (!open) return <Rail />;
 
@@ -99,7 +110,7 @@ export function Track() {
           className="track-close"
           title="Collapse to rail"
           aria-label="Collapse to rail"
-          onClick={() => setOpen(false)}
+          onClick={closeTrack}
         >
           ›
         </button>
