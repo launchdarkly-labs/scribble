@@ -1,92 +1,35 @@
+/**
+ * Expanded thread view for an annotation. The original comment + all
+ * replies + a reply textarea + actions (Resolve / Reopen / Delete).
+ *
+ * Positioning is the Track's responsibility — this component renders the
+ * card body and nothing else. Mounting/unmounting is decided by Track
+ * based on `activeId` and `showThreadForId` (see Track.tsx and
+ * dialog-coordinator.ts for the activation→reveal flow).
+ */
 import { useEffect, useRef, useState } from "react";
-import { useSignals } from "@preact/signals-react/runtime";
 import {
-  activeAnnotation,
   activeId,
   replyToAnnotation,
   resolveAnnotation,
   reopenAnnotation,
   deleteAnnotation,
-  showThreadForId,
 } from "../store";
-import { locate } from "../anchoring";
 import type { Annotation, Author } from "@/shared/types";
 import { authorLabel } from "@/shared/types";
 
-const CARD_W = 360;
-const SIDEBAR_W = 320;
-const GAP = 16;
-
-/**
- * Floats next to the annotated span in the host document. Shows the full
- * thread (original comment + replies), a reply textarea, and actions
- * (Resolve / Reopen / Delete / Close).
- */
-export function ThreadCard() {
-  useSignals();
-  const ann = activeAnnotation.value;
-  // The dialog coordinator owns *when* the card may appear: only after the
-  // annotation's target has reached the viewport's center band. Until then,
-  // we keep `pos` null and render nothing — so the card never visibly
-  // travels with the smooth scroll.
-  const showCard = showThreadForId.value === ann?.id;
+export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
   const [reply, setReply] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Reset reply field when switching annotations
+  // Reset reply field when switching annotations.
   useEffect(() => {
     setReply("");
-  }, [ann?.id]);
-
-  // Track the annotated range's position so the card follows on scroll/resize.
-  // Gated on `showCard` so it doesn't run — and the card stays unrendered —
-  // until the coordinator centers the activation. The scrollIntoView call
-  // that brings the target into view lives in the coordinator, not here.
-  //
-  // rAF-throttled: scroll events fire once per frame, and an unthrottled
-  // handler doing locate() + setPos() per event can stall the main thread.
-  useEffect(() => {
-    if (!ann || !showCard) {
-      setPos(null);
-      return;
-    }
-    const compute = () => {
-      const range = locate(ann.target.selector, document.body);
-      if (!range) {
-        setPos(null);
-        return;
-      }
-      const r = range.getBoundingClientRect();
-      if (r.width === 0 && r.height === 0) {
-        setPos(null);
-        return;
-      }
-      const maxLeft = window.innerWidth - SIDEBAR_W - CARD_W - GAP;
-      const top = Math.min(Math.max(8, r.bottom + 8), window.innerHeight - 240);
-      const left = Math.min(Math.max(8, r.left), Math.max(8, maxLeft));
-      setPos({ top, left });
-    };
-    let raf: number | null = null;
-    const update = () => {
-      if (raf != null) return;
-      raf = requestAnimationFrame(() => {
-        raf = null;
-        compute();
-      });
-    };
-    compute(); // first paint: synchronous so the card appears in place
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      if (raf != null) cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [ann?.id, showCard]);
-
-  if (!ann || !pos) return null;
+    requestAnimationFrame(() =>
+      textareaRef.current?.focus({ preventScroll: true }),
+    );
+  }, [ann.id]);
 
   const close = () => {
     activeId.value = null;
@@ -138,7 +81,6 @@ export function ThreadCard() {
   return (
     <div
       className="card thread-card"
-      style={{ top: pos.top, left: pos.left }}
       role="dialog"
       aria-label="Annotation thread"
       onKeyDown={(e) => {
@@ -149,9 +91,18 @@ export function ThreadCard() {
       }}
     >
       <div className="thread">
-        <ThreadMessage author={ann.author} body={ann.body.value} created={ann.created} />
+        <ThreadMessage
+          author={ann.author}
+          body={ann.body.value}
+          created={ann.created}
+        />
         {ann.replies.map((r, i) => (
-          <ThreadMessage key={i} author={r.author} body={r.body} created={r.created} />
+          <ThreadMessage
+            key={i}
+            author={r.author}
+            body={r.body}
+            created={r.created}
+          />
         ))}
       </div>
       <div className="thread-divider" />
@@ -175,15 +126,30 @@ export function ThreadCard() {
           <kbd>⌘↩</kbd> reply · <kbd>⌘⇧↩</kbd> resolve
         </span>
         <div className="card-buttons">
-          <button type="button" className="btn danger" onClick={remove} disabled={submitting}>
+          <button
+            type="button"
+            className="btn danger"
+            onClick={remove}
+            disabled={submitting}
+          >
             Delete
           </button>
           {ann.status === "open" ? (
-            <button type="button" className="btn ghost" onClick={resolveWith} disabled={submitting}>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={resolveWith}
+              disabled={submitting}
+            >
               Resolve
             </button>
           ) : (
-            <button type="button" className="btn ghost" onClick={reopen} disabled={submitting}>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={reopen}
+              disabled={submitting}
+            >
               Reopen
             </button>
           )}

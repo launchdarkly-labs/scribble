@@ -9,10 +9,8 @@
  */
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { Sidebar } from "./components/Sidebar";
+import { Track } from "./components/Track";
 import { SelectionPill } from "./components/SelectionPill";
-import { DraftCard } from "./components/DraftCard";
-import { ThreadCard } from "./components/ThreadCard";
 import { connect, draftRange, activeId, hoverId, annotations } from "./store";
 import { startHighlightSync, annotationAt } from "./highlights";
 import { startHashSync } from "./hash-sync";
@@ -80,8 +78,8 @@ html {
   text-decoration-thickness: 2px;
   text-underline-offset: 3px;
 }
-/* Make room for the sidebar so it doesn't overlap content. */
-body { padding-right: 320px; }
+/* Make room for the annotation track so it doesn't overlap content. */
+body { padding-right: 360px; }
 `;
 
 function bootstrap() {
@@ -110,10 +108,8 @@ function bootstrap() {
   shadow.appendChild(mount);
   createRoot(mount).render(
     <StrictMode>
-      <Sidebar />
+      <Track />
       <SelectionPill />
-      <DraftCard />
-      <ThreadCard />
     </StrictMode>,
   );
 

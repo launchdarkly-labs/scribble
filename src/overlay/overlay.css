@@ -45,14 +45,19 @@
 
 * { box-sizing: border-box; }
 
-/* ────────────────────────  Sidebar  ─────────────────────── */
+/* ─────────────────────────  Track  ───────────────────────── */
 
-.sidebar {
+/* The single right-column home for all annotation UI. Cards (chips,
+   expanded threads, drafts) are positioned inside .track-body by the
+   Track layout solver. Anchored to the viewport (position: fixed) so
+   the column itself doesn't scroll; the cards' tops are recomputed from
+   their anchor rects on every scroll frame. */
+.track {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 320px;
+  width: 360px;
   background: var(--surface);
   border-left: 1px solid var(--rule);
   font-family: var(--font-ui);
@@ -63,18 +68,19 @@
   overflow: hidden;
 }
 
-.sidebar-header {
-  padding: 14px 16px;
+.track-header {
+  height: 48px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--rule);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  flex: 0 0 auto;
+  background: var(--surface);
 }
-
-.sidebar-title { font-weight: 600; letter-spacing: -0.01em; font-size: 13px; }
-
-.sidebar-status { font-size: 11px; color: var(--muted); }
-.sidebar-status .dot {
+.track-title { font-weight: 600; letter-spacing: -0.01em; font-size: 13px; }
+.track-status { font-size: 11px; color: var(--muted); }
+.track-status .dot {
   display: inline-block;
   width: 6px; height: 6px;
   border-radius: 50%;
@@ -82,112 +88,92 @@
   margin-right: 5px;
   vertical-align: middle;
 }
-.sidebar-status .dot.live { background: oklch(70% 0.15 145); }
+.track-status .dot.live { background: oklch(70% 0.15 145); }
 
-.sidebar-list {
-  flex: 1;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 8px;
-  scrollbar-width: thin;
+.track-body {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
-.sidebar-empty {
-  padding: 32px 20px;
+.track-empty {
+  position: absolute;
+  top: 24px;
+  left: 20px;
+  right: 20px;
   color: var(--muted);
   font-style: italic;
   line-height: 1.5;
   font-size: 12px;
 }
-
-.section-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 8px 4px;
+.track-empty kbd {
+  font-family: var(--font-ui);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  padding: 1px 4px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--bg);
   color: var(--muted);
-  user-select: none;
-  cursor: pointer;
-  background: none;
-  border: none;
-  width: 100%;
-  text-align: left;
+  font-style: normal;
 }
-.section-label:hover { color: var(--ink); }
-.section-label .caret {
-  display: inline-block;
-  width: 8px;
-  transition: transform 0.15s;
-}
-.section-label.collapsed .caret { transform: rotate(-90deg); }
-.section-label .count { color: var(--faint); font-weight: 500; }
 
-.item {
-  display: block;
-  width: 100%;
-  text-align: left;
+/* Each card lives in a track-slot positioned absolutely by the layout
+   solver. left/right padding inset from the track edges. */
+.track-slot {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+}
+
+/* Off-screen jump buttons. Sticky at top/bottom of .track-body. */
+.track-nav {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  background: var(--surface);
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+  font: 600 11px/1.2 var(--font-ui);
+  color: var(--muted);
+  cursor: pointer;
+  text-align: center;
+  z-index: 1;
+}
+.track-nav.above { top: 8px; }
+.track-nav.below { bottom: 8px; }
+.track-nav:hover { color: var(--ink); border-color: var(--accent-line); }
+
+/* Compact card in the track. Click → activates the annotation and the
+   chip swaps to an expanded ThreadCard in place. */
+.chip {
   background: var(--bg);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
-  padding: 10px 12px;
-  margin-bottom: 6px;
+  padding: 8px 10px;
   cursor: pointer;
-  font: inherit;
-  color: inherit;
-  transition: border-color 0.15s, background 0.15s;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: border-color 0.1s, background 0.1s;
 }
-.item:hover { border-color: var(--accent-line); }
-.item.active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  box-shadow: 0 0 0 1px var(--accent) inset;
-}
-.item.resolved { opacity: 0.6; }
-.item.resolved:hover { opacity: 0.85; }
+.chip:hover,
+.chip.hover { border-color: var(--accent-line); }
+.chip.resolved { opacity: 0.55; }
+.chip.resolved:hover { opacity: 0.85; }
 
-.item.orphaned { opacity: 0.55; cursor: default; }
-.item.orphaned:hover { border-color: var(--rule); }
-
-.status-pill.orphaned {
-  background: color-mix(in oklch, #d97757 14%, transparent);
-  color: #b85a3c;
-}
-
-.item-head {
+.chip-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 11px;
   color: var(--muted);
-  margin-bottom: 5px;
 }
-.item-head .author { display: inline-flex; align-items: center; gap: 4px; }
+.chip-head .chip-author { display: inline-flex; align-items: center; gap: 4px; }
 
-/* Only rendered for orphans (see Sidebar.tsx). Utilitarian styling —
-   this is here because the in-document highlight is missing, not as a
-   pull-quote flourish. Line-through reinforces "text we couldn't find". */
-.item-quote {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  color: var(--muted);
-  margin: 4px 0 6px;
+.chip-body {
+  font-size: 12px;
   line-height: 1.4;
-  text-decoration: line-through;
-  text-decoration-color: var(--faint);
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.item-body {
-  font-size: 13px;
-  line-height: 1.45;
   color: var(--ink);
   white-space: pre-wrap;
   display: -webkit-box;
@@ -195,12 +181,79 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.chip-meta { font-size: 10px; color: var(--faint); }
 
-.item-reply-count {
+.status-pill.orphaned {
+  background: color-mix(in oklch, #d97757 14%, transparent);
+  color: #b85a3c;
+}
+
+/* Orphan drawer pinned to the bottom of the track. Orphans have no
+   anchor and so can't be placed in the anchored column. */
+.orphans-drawer {
+  border-top: 1px solid var(--rule);
+  background: var(--surface);
+  flex: 0 0 auto;
+  max-height: 40%;
+  display: flex;
+  flex-direction: column;
+}
+.orphans-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.orphans-toggle:hover { color: var(--ink); }
+.orphans-toggle .caret {
   display: inline-block;
-  margin-top: 6px;
+  width: 8px;
+  transition: transform 0.15s;
+}
+.orphans-toggle.collapsed .caret { transform: rotate(-90deg); }
+.orphans-toggle .count { color: var(--faint); font-weight: 500; }
+
+.orphans-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 0 12px 12px;
+  scrollbar-width: thin;
+}
+
+.orphan-item {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  opacity: 0.75;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Orphan quote — utilitarian, signals "text we couldn't find". */
+.orphan-quote {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;
   color: var(--muted);
+  line-height: 1.4;
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ─────────────────────  Selection pill  ─────────────────── */
@@ -230,25 +283,27 @@
 
 /* ─────────────────  Card (draft + thread)  ──────────────── */
 
-/* The card itself is a scroll container so wheel events over its inert
-   areas (header, quote, action row) are absorbed instead of chaining to
-   the page. overflow-x: hidden preserves the rounded-corner clip. */
+/* Cards live inside .track-slot, which positions them. The card itself
+   is a scroll container so wheel events over its inert areas (header,
+   action row) are absorbed instead of chaining to the page. overflow-x:
+   hidden preserves the rounded-corner clip. max-height is chosen to
+   match ACTIVE_H / DRAFT_H in Track.tsx so the layout solver's height
+   estimate doesn't underrun. */
 .card {
-  position: fixed;
-  width: 360px;
-  max-height: 90vh;
+  width: 100%;
+  max-height: 360px;
   background: var(--bg);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   font: 13px/1.5 var(--font-ui);
   color: var(--ink);
-  z-index: 2;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
 }
+.card.draft-card { max-height: 180px; }
 
 .card-body { padding: 10px 12px 4px; }
 
@@ -341,7 +396,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 280px;
+  max-height: 200px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
