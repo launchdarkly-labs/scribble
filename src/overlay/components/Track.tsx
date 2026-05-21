@@ -60,6 +60,9 @@ import { DraftCard } from "./DraftCard";
 import { ChipCard } from "./ChipCard";
 
 // Layout constants. Keep in sync with .card max-heights in overlay.css.
+// HEADER_H is used to convert viewport-relative anchor rects (from
+// getBoundingClientRect) into track-body-relative tops, since slots are
+// positioned inside .track-body which already sits below the header.
 const HEADER_H = 48;
 const TRACK_PAD_TOP = 8;
 const GAP = 8;
@@ -130,7 +133,8 @@ export function Track() {
       kind: "ann",
       id: a.id,
       ann: a,
-      desiredTop: r.top,
+      // Translate viewport-relative top → track-body-relative top.
+      desiredTop: r.top - HEADER_H,
       height: isActive ? ACTIVE_H : CHIP_H,
     });
   }
@@ -141,14 +145,14 @@ export function Track() {
       items.push({
         kind: "draft",
         id: "__draft__",
-        desiredTop: r.top,
+        desiredTop: r.top - HEADER_H,
         height: DRAFT_H,
       });
     }
   }
 
   items.sort((a, b) => a.desiredTop - b.desiredTop);
-  let cursor = HEADER_H + TRACK_PAD_TOP;
+  let cursor = TRACK_PAD_TOP;
   const laid = items.map((it) => {
     const top = Math.max(cursor, it.desiredTop);
     cursor = top + it.height + GAP;
