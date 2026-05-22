@@ -266,6 +266,13 @@ body {
   letter-spacing: -0.01em;
   font-size: 0.9375rem;
   flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.track-logo {
+  color: var(--accent);
+  flex: 0 0 auto;
 }
 .track-status {
   font-size: 0.75rem;
@@ -606,6 +613,19 @@ kbd {
 .btn.ghost:hover:not(:disabled) {
   color: var(--ink);
   background: var(--surface);
+}
+/* Secondary action paired with a primary .btn (e.g. Cancel next to
+   Comment). Outlined / inverted from the primary so the visual weight
+   is obviously lower. */
+.btn.btn-secondary {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+}
+.btn.btn-secondary:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: oklch(from var(--rule) calc(l - 0.05) c h);
 }
 .btn.danger {
   background: transparent;

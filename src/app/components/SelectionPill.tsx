@@ -16,6 +16,7 @@
 import { useEffect, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
 import { Button } from "@base-ui/react/button";
+import { MessageSquareHeart } from "lucide-react";
 import {
   iframeElAtom,
   draftRangeAtom,
@@ -88,6 +89,7 @@ export function SelectionPill() {
         setTrackOpen(true);
       }}
     >
+      <MessageSquareHeart size={14} aria-hidden />
       <span>Comment</span>
       <span className="kbd">⌘K</span>
     </Button>

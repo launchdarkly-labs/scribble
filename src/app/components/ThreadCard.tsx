@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
-import { Trash2, Check, Undo2, Send } from "lucide-react";
+import { Trash2, Check, Undo2, MessageSquareHeart } from "lucide-react";
 import { Button } from "@base-ui/react/button";
 import { activeIdAtom, humanAuthorAtom } from "../atoms";
 import { Tip } from "./Tip";
@@ -163,7 +163,7 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
               disabled={!reply.trim() || submitting}
               focusableWhenDisabled
             >
-              <Send size={14} />
+              <MessageSquareHeart size={15} />
               <span>Reply</span>
             </Button>
           </Tip>

@@ -31,7 +31,7 @@ import {
   RegistryContext,
 } from "@effect-atom/atom-react";
 import { Drawer } from "@base-ui/react/drawer";
-import { X, MessageSquareText, ChevronLeft } from "lucide-react";
+import { X, MessageSquareHeart, ChevronLeft } from "lucide-react";
 import { Button } from "@base-ui/react/button";
 import { Tip } from "./Tip";
 import {
@@ -142,7 +142,14 @@ export function Track() {
             }}
           >
             <header className="track-header">
-              <Drawer.Title className="track-title">Scribble</Drawer.Title>
+              <Drawer.Title className="track-title">
+                <MessageSquareHeart
+                  size={18}
+                  className="track-logo"
+                  aria-hidden
+                />
+                <span>Scribble</span>
+              </Drawer.Title>
               <span className="track-status">
                 <span className={`dot ${connected ? "live" : ""}`} />
                 {unresolvedCount} open
@@ -185,7 +192,7 @@ function RailContent({
           className={`dot ${connected ? "live" : ""}`}
           aria-hidden="true"
         />
-        <MessageSquareText
+        <MessageSquareHeart
           className="rail-icon"
           size={16}
           aria-hidden="true"

@@ -10,7 +10,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
-import { X, Send } from "lucide-react";
+import { MessageSquareHeart } from "lucide-react";
 import { Button } from "@base-ui/react/button";
 import {
   draftRangeAtom,
@@ -87,13 +87,16 @@ export function DraftCard() {
       </div>
       <div className="card-actions">
         <div className="card-buttons">
-          <Tip label="Cancel" kbd={["Esc"]}>
+          {/* A real text 'Cancel' button reads better than an X icon
+             next to a primary action with a label of its own — the
+             two start to look balanced rather than primary/secondary.
+             Esc still cancels (handled by the Drawer in Track.tsx). */}
+          <Tip kbd={["Esc"]}>
             <Button
-              className="icon-btn"
+              className="btn btn-secondary"
               onClick={() => setDraftRange(null)}
-              aria-label="Cancel"
             >
-              <X size={16} />
+              Cancel
             </Button>
           </Tip>
           <Tip kbd={["⌘", "Enter"]}>
@@ -103,7 +106,7 @@ export function DraftCard() {
               onClick={submit}
               focusableWhenDisabled
             >
-              <Send size={14} />
+              <MessageSquareHeart size={15} />
               <span>Comment</span>
             </Button>
           </Tip>
