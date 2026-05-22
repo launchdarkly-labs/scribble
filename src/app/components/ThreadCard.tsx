@@ -81,16 +81,14 @@ export function ThreadCard({ annotation: ann }: { annotation: Annotation }) {
   };
 
   return (
+    // Esc is handled by the Drawer in Track.tsx (onOpenChange,
+    // reason='escape-key'). No local Esc handler here — it'd race
+    // the drawer's listener and the drawer would collapse as a side
+    // effect of clearing activeId.
     <div
       className="card thread-card"
       role="dialog"
       aria-label="Annotation thread"
-      onKeyDown={(e) => {
-        if (e.key === "Escape") {
-          e.preventDefault();
-          close();
-        }
-      }}
     >
       <Scroll className="thread">
         <ThreadMessage

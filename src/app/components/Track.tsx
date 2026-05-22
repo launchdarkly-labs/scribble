@@ -86,29 +86,23 @@ export function Track() {
 
   // Single source of truth for "should be open." Two policies:
   //   1. Closing always clears focus state too, so we never return to
-  //      a zombie "closed but selected" state.
-  //   2. Esc with a focused draft or active thread dismisses that
-  //      focus rather than collapsing the drawer. We intercept the
-  //      change event and `details.cancel()` to keep the drawer open.
-  //      (Without this, the drawer's Esc handler treats Esc as a
-  //      close request — the user has to press Esc twice to undo a
-  //      stray selection, which feels broken.)
+  //      a zombie "closed but selected" state next time the rail is
+  //      clicked.
+  //   2. Esc is the canonical "dismiss focus" key but should never
+  //      collapse the drawer — the user opened it deliberately and
+  //      the ✕ button is the only way out. We intercept the change
+  //      event and `details.cancel()` every Esc close. The cancel
+  //      also matters because per-component Esc handlers (in cards or
+  //      the textarea) would otherwise race this handler.
   const handleOpenChange: React.ComponentProps<typeof Drawer.Root>["onOpenChange"] = (
     next,
     details,
   ) => {
     if (!next && details.reason === "escape-key") {
-      if (registry.get(draftRangeAtom)) {
-        setDraft(null);
-        details.cancel();
-        return;
-      }
-      if (registry.get(activeIdAtom)) {
-        setActive(null);
-        details.cancel();
-        return;
-      }
-      // Esc with nothing focused: allow the drawer to collapse.
+      if (registry.get(draftRangeAtom)) setDraft(null);
+      else if (registry.get(activeIdAtom)) setActive(null);
+      details.cancel();
+      return;
     }
     if (!next) {
       if (aid) setActive(null);

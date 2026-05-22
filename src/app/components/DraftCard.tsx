@@ -74,11 +74,11 @@ export function DraftCard() {
           placeholder="Add a comment…"
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          // Esc is handled by the Drawer in Track.tsx (onOpenChange,
+          // reason='escape-key') so the drawer can't accidentally close
+          // in response. Only ⌘+Enter is local here.
           onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              e.preventDefault();
-              setDraftRange(null);
-            } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
               e.preventDefault();
               void submit();
             }
