@@ -23,8 +23,13 @@
  *   (c) the slide-over pattern is what we actually want (no iframe
  *       reflow on toggle, just a panel sliding in).
  */
-import { useMemo, useState } from "react";
-import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
+import * as React from "react";
+import { useMemo, useState, useContext } from "react";
+import {
+  useAtomSet,
+  useAtomValue,
+  RegistryContext,
+} from "@effect-atom/atom-react";
 import { Drawer } from "@base-ui/react/drawer";
 import { X, MessageSquareText, ChevronLeft } from "lucide-react";
 import { Button } from "@base-ui/react/button";
@@ -73,15 +78,38 @@ export function Track() {
   const setDraft = useAtomSet(draftRangeAtom);
   const unresolvedCount = useAtomValue(unresolvedAtom).length;
   const connected = useAtomValue(connectedAtom);
+  const registry = useContext(RegistryContext);
 
   const activeAnn = aid ? all.find((a) => a.id === aid) ?? null : null;
   const focused = !!(activeAnn || draft);
   const orphans = all.filter((a) => orphanSet.has(a.id));
 
-  // Single source of truth for "should be open." When closing, also
-  // clear focus state so we don't return to a zombie "closed but
-  // selected" state next time the rail is clicked.
-  const handleOpenChange = (next: boolean) => {
+  // Single source of truth for "should be open." Two policies:
+  //   1. Closing always clears focus state too, so we never return to
+  //      a zombie "closed but selected" state.
+  //   2. Esc with a focused draft or active thread dismisses that
+  //      focus rather than collapsing the drawer. We intercept the
+  //      change event and `details.cancel()` to keep the drawer open.
+  //      (Without this, the drawer's Esc handler treats Esc as a
+  //      close request — the user has to press Esc twice to undo a
+  //      stray selection, which feels broken.)
+  const handleOpenChange: React.ComponentProps<typeof Drawer.Root>["onOpenChange"] = (
+    next,
+    details,
+  ) => {
+    if (!next && details.reason === "escape-key") {
+      if (registry.get(draftRangeAtom)) {
+        setDraft(null);
+        details.cancel();
+        return;
+      }
+      if (registry.get(activeIdAtom)) {
+        setActive(null);
+        details.cancel();
+        return;
+      }
+      // Esc with nothing focused: allow the drawer to collapse.
+    }
     if (!next) {
       if (aid) setActive(null);
       if (draft) setDraft(null);
@@ -103,7 +131,22 @@ export function Track() {
       </Drawer.Trigger>
       <Drawer.Portal>
         <Drawer.Viewport className="drawer-viewport">
-          <Drawer.Popup className="track-popup">
+          <Drawer.Popup
+            className="track-popup"
+            onClick={(e) => {
+              // Background click inside the popup (anywhere that isn't
+              // a card, drawer, or button) dismisses the current focus,
+              // matching the iframe-side behavior.
+              const t = e.target as Element | null;
+              if (
+                t?.closest?.(".track-slot, .orphans-drawer, .chip, button, [role='button'], input, textarea")
+              ) {
+                return;
+              }
+              if (aid) setActive(null);
+              if (draft) setDraft(null);
+            }}
+          >
             <header className="track-header">
               <Drawer.Title className="track-title">Scribble</Drawer.Title>
               <span className="track-status">
