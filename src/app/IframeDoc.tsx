@@ -170,7 +170,10 @@ export function IframeDoc() {
           if (next) setTrackOpen(true);
           return;
         }
+        // Click anywhere in the doc that isn't on an annotation:
+        // dismiss whatever's focused (active thread or in-progress draft).
         if (registry.get(activeIdAtom)) setActiveId(null);
+        if (registry.get(draftRangeAtom)) setDraftRange(null);
       };
       doc.addEventListener("mousemove", onMouseMove);
       doc.addEventListener("mouseleave", onMouseLeave);

@@ -1,15 +1,8 @@
 /**
  * Compact preview of one annotation in the track's list mode. Renders
  * the author, the first couple of lines of the body, and a reply count
- * when there are replies. Clicking it activates the annotation, which
+ * when there are replies. Clicking activates the annotation, which
  * switches the track to focus mode and scrolls the doc to the anchor.
- *
- * The host element is a `<Button render={<div />} nativeButton={false}>`
- * — a div that base-ui has dressed in button semantics (role="button",
- * tabindex, Enter/Space key handlers, disabled state plumbing). A real
- * `<button>` would force phrasing-content semantics that conflict with
- * the chip's two-row flex layout; this gets us the affordance without
- * the constraint.
  */
 import { Button } from "@base-ui/react/button";
 import { useAtomSet, useAtomValue } from "@effect-atom/atom-react";
@@ -25,8 +18,6 @@ export function Chip({ annotation: ann }: { annotation: Annotation }) {
 
   return (
     <Button
-      render={<div />}
-      nativeButton={false}
       className={`chip ${ann.status} ${isHover ? "hover" : ""}`}
       onClick={() => setActive(ann.id)}
       onMouseEnter={() => setHover(ann.id)}

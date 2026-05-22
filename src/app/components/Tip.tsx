@@ -33,7 +33,11 @@ export function Tip({
     <Tooltip.Root>
       <Tooltip.Trigger render={children} />
       <Tooltip.Portal>
-        <Tooltip.Positioner side={side} sideOffset={sideOffset}>
+        <Tooltip.Positioner
+          className="tooltip-positioner"
+          side={side}
+          sideOffset={sideOffset}
+        >
           <Tooltip.Popup className="tooltip">
             {label && <span className="tooltip-label">{label}</span>}
             {kbd && kbd.length > 0 && (

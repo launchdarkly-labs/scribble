@@ -378,7 +378,10 @@ body {
 
 /* ─────────────────────────  Chip (compact)  ───────────────────────── */
 
+/* .chip is rendered as a <button> via base-ui Button — reset the
+   native button styles that fight the chip's flex layout. */
 .chip {
+  appearance: none;
   background: var(--bg);
   border: 1px solid var(--rule);
   border-radius: var(--radius);
@@ -387,6 +390,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  width: 100%;
   transition: border-color 0.1s, background 0.1s;
 }
 .chip:hover,
@@ -781,6 +788,16 @@ kbd {
 
 /* ─────────────────────────  Tooltip  ────────────────────── */
 
+/* base-ui's transition convention: the steady (mounted-and-visible)
+   state is the default; `data-starting-style` and `data-ending-style`
+   provide the from/to states during open/close transitions. The
+   tooltip is only mounted while open, so default = visible. */
+.tooltip-positioner {
+  /* The positioner is what floating-ui anchors to the trigger. Both
+     it and the drawer's viewport portal to <body>; without an explicit
+     z-index the tooltip ends up behind the drawer's z:100 viewport. */
+  z-index: 1000;
+}
 .tooltip {
   background: var(--ink);
   color: var(--bg);
@@ -792,18 +809,14 @@ kbd {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  z-index: 200;
-  opacity: 0;
-  transition: opacity 0.12s, transform 0.12s;
-  transform: scale(0.97);
-  transform-origin: center;
   pointer-events: none;
-}
-.tooltip[data-open] {
   opacity: 1;
   transform: scale(1);
+  transform-origin: center;
+  transition: opacity 0.12s, transform 0.12s;
 }
-.tooltip[data-starting-style] {
+.tooltip[data-starting-style],
+.tooltip[data-ending-style] {
   opacity: 0;
   transform: scale(0.97);
 }
